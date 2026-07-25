@@ -1,0 +1,1 @@
+# CloserFlow 21.0.0 — Cash Pilot\n\nProjection 90 jours, scénarios prudent/base/ambitieux, factures, devis, contrats, dépenses, point bas et priorités cash. Tous les modules V20 sont conservés.\n

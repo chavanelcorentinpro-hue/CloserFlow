@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.DS_Store
+*.log
+data/workspace-*.json
+node_modules/
+dist/
+android/local.properties
+.gradle/
+android/.gradle/
+android/app/build/
+release/
+diagnostics/

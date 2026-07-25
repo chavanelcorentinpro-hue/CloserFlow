@@ -1,0 +1,27 @@
+import { useMemo, useState } from 'react';
+import { MapPin, Navigation, Route, Save, Sparkles, Fuel, Clock3 } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+
+type Point={lat:number;lng:number};
+type SavedMap=Record<string,Point>;
+const key='closerflow.routeCoordinates.v10_6';
+const read=():SavedMap=>{try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return {}}};
+const km=(a:Point,b:Point)=>{const R=6371;const dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+const fmt=(n:number)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1}).format(n);
+export function RouteOptimizationPage(){
+ const {missions,team,assignMission}=useAppData();
+ const [coords,setCoords]=useState<SavedMap>(read);const [depot,setDepot]=useState<Point>({lat:45.899,lng:6.129});const [costKm,setCostKm]=useState(0.65);const [avgSpeed,setAvgSpeed]=useState(45);const [selectedTech,setSelectedTech]=useState('');const [routeIds,setRouteIds]=useState<string[]>([]);
+ const candidates=useMemo(()=>missions.filter(m=>m.address&&m.status!=='archived'&&m.status!=='paid'),[missions]);
+ const usable=candidates.filter(m=>coords[m.id]);
+ const savePoint=(id:string,field:'lat'|'lng',value:string)=>{const p=coords[id]||{lat:0,lng:0};const next={...coords,[id]:{...p,[field]:Number(value)}};setCoords(next);localStorage.setItem(key,JSON.stringify(next))};
+ const locate=()=>navigator.geolocation?.getCurrentPosition(p=>setDepot({lat:p.coords.latitude,lng:p.coords.longitude}),()=>alert('Localisation indisponible. Saisis les coordonnées du dépôt.'));
+ const optimize=()=>{let current=depot;const remaining=[...usable];const ids:string[]=[];while(remaining.length){remaining.sort((a,b)=>km(current,coords[a.id])-km(current,coords[b.id]));const next=remaining.shift()!;ids.push(next.id);current=coords[next.id]}setRouteIds(ids)};
+ const ordered=routeIds.map(id=>missions.find(m=>m.id===id)!).filter(Boolean);let cursor=depot;const legs=ordered.map(m=>{const d=km(cursor,coords[m.id]);cursor=coords[m.id];return d});const total=legs.reduce((a,b)=>a+b,0)+(ordered.length?km(cursor,depot):0);const minutes=avgSpeed>0?total/avgSpeed*60:0;
+ const applyTech=()=>{if(!selectedTech)return;routeIds.forEach(id=>assignMission(id,selectedTech));alert('Technicien affecté à la tournée.');};
+ return <><div className="page-title"><div><p className="eyebrow">V10.6 · TOURNÉES</p><h1>Optimisation des trajets</h1><p className="muted">Prépare une tournée par proximité, estime les kilomètres, le temps et le coût de déplacement.</p></div><Route/></div>
+ <section className="panel route-controls"><label>Latitude dépôt<input type="number" step="0.0001" value={depot.lat} onChange={e=>setDepot({...depot,lat:Number(e.target.value)})}/></label><label>Longitude dépôt<input type="number" step="0.0001" value={depot.lng} onChange={e=>setDepot({...depot,lng:Number(e.target.value)})}/></label><button onClick={locate}><Navigation/> Ma position</button><label>Coût/km (€)<input type="number" step="0.05" value={costKm} onChange={e=>setCostKm(Number(e.target.value))}/></label><label>Vitesse moyenne<input type="number" value={avgSpeed} onChange={e=>setAvgSpeed(Number(e.target.value))}/></label><button className="primary-button" onClick={optimize} disabled={!usable.length}><Sparkles/> Optimiser</button></section>
+ <div className="metric-grid"><div className="metric-card"><MapPin/><strong>{usable.length}/{candidates.length}</strong><span>adresses géolocalisées</span></div><div className="metric-card"><Route/><strong>{fmt(total)} km</strong><span>tournée aller-retour</span></div><div className="metric-card"><Clock3/><strong>{Math.round(minutes)} min</strong><span>temps de route estimé</span></div><div className="metric-card"><Fuel/><strong>{(total*costKm).toFixed(2)} €</strong><span>coût estimé</span></div></div>
+ <section className="panel"><div className="panel-heading"><div><p className="eyebrow">COORDONNÉES</p><h2>Interventions à préparer</h2></div><Save/></div><div className="route-coordinate-list">{candidates.map(m=><article key={m.id}><div><strong>{m.title}</strong><small>{m.address}</small></div><input placeholder="Latitude" type="number" step="0.0001" value={coords[m.id]?.lat||''} onChange={e=>savePoint(m.id,'lat',e.target.value)}/><input placeholder="Longitude" type="number" step="0.0001" value={coords[m.id]?.lng||''} onChange={e=>savePoint(m.id,'lng',e.target.value)}/></article>)}</div></section>
+ {ordered.length>0&&<section className="panel"><div className="panel-heading"><div><p className="eyebrow">TOURNÉE PROPOSÉE</p><h2>{ordered.length} interventions</h2></div><Navigation/></div><div className="route-list">{ordered.map((m,i)=><article key={m.id}><b>{i+1}</b><div><strong>{m.title}</strong><small>{m.address}</small></div><span>{fmt(legs[i])} km depuis l’étape précédente</span></article>)}</div><div className="actions-row"><select value={selectedTech} onChange={e=>setSelectedTech(e.target.value)}><option value="">Choisir un technicien</option>{team.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select><button onClick={applyTech} disabled={!selectedTech}>Affecter la tournée</button></div></section>}
+ <p className="muted route-note">Les coordonnées sont enregistrées localement. L’optimisation utilise une méthode de proximité et ne remplace pas un service cartographique tenant compte du trafic réel.</p></>;
+}

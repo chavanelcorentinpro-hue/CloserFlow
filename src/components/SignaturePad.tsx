@@ -1,0 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
+export function SignaturePad({onSave}:{onSave:(dataUrl:string,name:string)=>void}){
+ const ref=useRef<HTMLCanvasElement>(null); const drawing=useRef(false); const [name,setName]=useState('');
+ useEffect(()=>{const c=ref.current;if(!c)return;const ratio=Math.max(devicePixelRatio||1,1);const rect=c.getBoundingClientRect();c.width=rect.width*ratio;c.height=190*ratio;const ctx=c.getContext('2d');if(ctx){ctx.scale(ratio,ratio);ctx.lineWidth=2.5;ctx.lineCap='round';ctx.strokeStyle='#0f172a';ctx.fillStyle='#fff';ctx.fillRect(0,0,rect.width,190)}},[]);
+ const point=(e:React.PointerEvent<HTMLCanvasElement>)=>{const r=e.currentTarget.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+ const down=(e:React.PointerEvent<HTMLCanvasElement>)=>{drawing.current=true;e.currentTarget.setPointerCapture(e.pointerId);const ctx=e.currentTarget.getContext('2d');const q=point(e);ctx?.beginPath();ctx?.moveTo(q.x,q.y)};
+ const move=(e:React.PointerEvent<HTMLCanvasElement>)=>{if(!drawing.current)return;const q=point(e);const ctx=e.currentTarget.getContext('2d');ctx?.lineTo(q.x,q.y);ctx?.stroke()};
+ const clear=()=>{const c=ref.current;if(!c)return;const ctx=c.getContext('2d');ctx?.clearRect(0,0,c.width,c.height);ctx!.fillStyle='#fff';ctx!.fillRect(0,0,c.width,c.height)};
+ return <div className="signature-box"><input value={name} onChange={e=>setName(e.target.value)} placeholder="Nom du signataire"/><canvas ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={()=>drawing.current=false} onPointerCancel={()=>drawing.current=false}/><div className="button-row"><button className="ghost" type="button" onClick={clear}>Effacer</button><button className="primary" type="button" disabled={!name.trim()} onClick={()=>ref.current&&onSave(ref.current.toDataURL('image/png'),name.trim())}>Valider la signature</button></div></div>
+}

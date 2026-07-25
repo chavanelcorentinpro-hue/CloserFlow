@@ -1,0 +1,39 @@
+import { useMemo, useState } from 'react';
+import { BrainCircuit, Building2, Cloud, Download, KeyRound, PackagePlus, PlugZap, ShieldCheck, Smartphone, Store, ToggleLeft, ToggleRight, WandSparkles } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+import { useV4Platform } from '../context/V4PlatformContext';
+
+type ModuleRow={id:string;name:string;description:string;enabled:boolean};
+type ConnectorRow={id:string;name:string;category:string;status:'ready'|'configuration'|'planned';endpoint:string};
+const moduleSeed:ModuleRow[]=[
+ {id:'estimating',name:'Chiffrage IA local',description:'Pré-devis, fournitures et marge sans envoi externe.',enabled:true},
+ {id:'mobile',name:'Application terrain',description:'Photos, pointage, signature et fonctionnement hors connexion.',enabled:true},
+ {id:'accounting',name:'Comptabilité & trésorerie',description:'TVA, balances, imports et exports comptables.',enabled:true},
+ {id:'maintenance',name:'SAV & maintenance',description:'Contrats, visites, garanties et équipements.',enabled:true},
+ {id:'marketplace',name:'Marketplace interne',description:'Activation contrôlée des modules par entreprise.',enabled:true},
+ {id:'advanced-ai',name:'Analyse photo assistée',description:'Architecture prête pour un modèle local ou un fournisseur externe.',enabled:false},
+];
+const connectorSeed:ConnectorRow[]=[
+ {id:'bank',name:'Banque / relevés',category:'Finance',status:'ready',endpoint:'/accounting-treasury'},
+ {id:'calendar',name:'Calendriers externes',category:'Planning',status:'configuration',endpoint:'/api-connectors'},
+ {id:'accounting',name:'Logiciels comptables',category:'Comptabilité',status:'ready',endpoint:'/accounting-treasury'},
+ {id:'einvoice',name:'Plateforme de facturation électronique',category:'Facturation',status:'configuration',endpoint:'/electronic-invoicing'},
+ {id:'maps',name:'Cartographie et trafic',category:'Tournées',status:'planned',endpoint:'/route-optimization'},
+];
+const readModules=()=>{try{return JSON.parse(localStorage.getItem('closerflow.v11.modules')||'null') as ModuleRow[]||moduleSeed}catch{return moduleSeed}};
+export function PlatformV11Page(){
+ const data=useAppData(); const platform=useV4Platform();
+ const [modules,setModules]=useState<ModuleRow[]>(readModules); const [prompt,setPrompt]=useState(''); const [answer,setAnswer]=useState('');
+ const totals=useMemo(()=>({clients:data.clients.length,missions:data.missions.length,organizations:platform.organizations.length,users:data.team.filter(x=>x.active).length,stockAlerts:data.inventory.filter(x=>x.quantity<=x.minimum_quantity).length}),[data,platform]);
+ const toggle=(id:string)=>setModules(rows=>{const next=rows.map(x=>x.id===id?{...x,enabled:!x.enabled}:x);localStorage.setItem('closerflow.v11.modules',JSON.stringify(next));return next});
+ const runAssistant=()=>{const text=prompt.trim();if(!text)return;const lower=text.toLowerCase();const findings:string[]=[];if(lower.includes('devis')||lower.includes('prix'))findings.push(`${data.quotes.filter(q=>q.status==='draft').length} devis sont encore en brouillon.`);if(lower.includes('stock')||lower.includes('matériel'))findings.push(`${totals.stockAlerts} article(s) sont au seuil de réapprovisionnement.`);if(lower.includes('impay')||lower.includes('facture'))findings.push(`${data.invoices.filter(i=>i.status==='overdue'||i.status==='partial').length} facture(s) demandent une action.`);if(lower.includes('chantier')||lower.includes('mission'))findings.push(`${data.missions.filter(m=>['planned','in_progress'].includes(m.status)).length} chantier(s) sont planifiés ou en cours.`);if(!findings.length)findings.push(`CloserFlow contient ${totals.clients} clients, ${totals.missions} missions et ${platform.organizations.length} espace(s) entreprise.`);setAnswer(findings.join(' '))};
+ const exportPlatform=()=>{const payload={version:'11.0.0',exported_at:new Date().toISOString(),active_organization:platform.activeOrganization,organizations:platform.organizations,modules,connectors:connectorSeed,metrics:totals};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='closerflow-platform-v11.json';a.click();URL.revokeObjectURL(a.href)};
+ return <><div className="page-title"><div><p className="eyebrow">CLOSERFLOW 11 · PLATEFORME</p><h1>Centre Enterprise</h1></div><button className="secondary compact" onClick={exportPlatform}><Download/>Exporter</button></div>
+ <div className="kpi-grid"><article><span>Entreprises</span><strong>{totals.organizations}</strong></article><article><span>Utilisateurs actifs</span><strong>{totals.users}</strong></article><article><span>Modules actifs</span><strong>{modules.filter(x=>x.enabled).length}</strong></article><article><span>Alertes stock</span><strong>{totals.stockAlerts}</strong></article></div>
+ <section className="form-card"><h2><Building2/> Multi-entreprises consolidé</h2><p className="muted">L’espace actif est <strong>{platform.activeOrganization.name}</strong>. Les achats, fournisseurs, dépôts, automatisations et audits sont isolés par société.</p><div className="stack">{platform.organizations.map(org=><article className="workspace-card" key={org.id}><div className="workspace-icon"><Building2/></div><div><strong>{org.name}</strong><small>{org.siret||'SIRET non renseigné'} · {org.id===platform.activeOrganizationId?'espace actif':'espace disponible'}</small></div>{org.id!==platform.activeOrganizationId&&<button className="secondary" onClick={()=>platform.setActiveOrganization(org.id)}>Ouvrir</button>}</article>)}</div></section>
+ <section className="form-card"><h2><BrainCircuit/> Assistant métier local</h2><p className="muted">Interroge les données locales sans les transmettre à un service extérieur.</p><label>Demande<textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Ex. Quels impayés et quels stocks dois-je traiter aujourd’hui ?"/></label><button className="primary" onClick={runAssistant}><WandSparkles/>Analyser</button>{answer&&<div className="insight-card"><strong>Résultat</strong><p>{answer}</p></div>}</section>
+ <section className="form-card"><h2><Store/> Marketplace de modules</h2><div className="stack">{modules.map(m=><article className="workspace-card" key={m.id}><div className="workspace-icon"><PackagePlus/></div><div><strong>{m.name}</strong><small>{m.description}</small></div><button className="secondary" onClick={()=>toggle(m.id)}>{m.enabled?<><ToggleRight/>Actif</>:<><ToggleLeft/>Inactif</>}</button></article>)}</div></section>
+ <section className="form-card"><h2><PlugZap/> Connecteurs</h2><div className="stack">{connectorSeed.map(c=><article className="detail-card" key={c.id}><div className="row-between"><div><strong>{c.name}</strong><small>{c.category}</small></div><span className="role-chip">{c.status==='ready'?'Prêt':c.status==='configuration'?'À configurer':'Planifié'}</span></div><code>{c.endpoint}</code></article>)}</div></section>
+ <div className="two-cols"><section className="form-card"><h2><Smartphone/> Mobile & hors connexion</h2><p>La PWA conserve les pages terrain, les photos, les signatures et les actions locales. La publication native Android/iOS nécessite encore les comptes stores et la signature des paquets.</p></section><section className="form-card"><h2><ShieldCheck/> Sécurité & exploitation</h2><p>Clés API hachées, journal d’audit, sauvegardes exportables, rôles, chargement dynamique et séparation des espaces entreprise.</p></section></div>
+ <section className="form-card"><h2><Cloud/> Déploiement SaaS</h2><p>Le socle est prêt pour un hébergement centralisé. Avant commercialisation à grande échelle, il faudra ajouter supervision, sauvegardes serveur automatisées, tests de charge et revue de sécurité externe.</p></section></>;
+}

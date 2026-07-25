@@ -1,0 +1,91 @@
+name: Build CloserFlow APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Lire la version
+        run: echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Préflight V32
+        run: npm run v32:preflight
+
+      - name: Installation npm propre
+        run: |
+          rm -rf node_modules
+          npm ci --no-audit --no-fund --prefer-offline
+
+      - name: Build web + Capacitor
+        run: npm run v32:build
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Préparer release bêta
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/app-debug.apk "release/CloserFlow-${APP_VERSION}-beta.apk"
+          sha256sum "release/CloserFlow-${APP_VERSION}-beta.apk" > "release/CloserFlow-${APP_VERSION}-beta.sha256"
+          npm run release:meta
+          npm run release:manifest || true
+          cp QA-BETA-CHECKLIST.md release/
+          cp RELEASE-NOTES-BETA.md release/
+          printf 'CloserFlow %s\nChannel: beta\nCommit: %s\nBuild UTC: %s\n' "$APP_VERSION" "$GITHUB_SHA" "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > release/build-info.txt
+
+      - name: Diagnostic échec
+        if: failure()
+        run: |
+          mkdir -p diagnostics
+          npm run env:report > diagnostics/environment.json 2>&1 || true
+          npm run v32:preflight > diagnostics/preflight.txt 2>&1 || true
+          npm run deps:check > diagnostics/deps-check.txt 2>&1 || true
+          npm run doctor > diagnostics/doctor.txt 2>&1 || true
+          npm run typecheck > diagnostics/typecheck.txt 2>&1 || true
+          npm run build > diagnostics/build.txt 2>&1 || true
+          ./android/gradlew --version > diagnostics/gradle.txt 2>&1 || true
+          find android/app/build -maxdepth 5 -type f 2>/dev/null | sort > diagnostics/android-build-files.txt || true
+
+      - name: Publier bêta
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloserFlow-${{ env.APP_VERSION }}-beta
+          path: release/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publier diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloserFlow-${{ env.APP_VERSION }}-build-diagnostics
+          path: diagnostics/
+          retention-days: 14
+          if-no-files-found: warn

@@ -1,0 +1,2 @@
+-- Le seed applicatif est volontairement vide : les données de démonstration
+-- sont embarquées dans src/lib/demo.ts pour lancer l'interface sans compte cloud.

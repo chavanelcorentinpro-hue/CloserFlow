@@ -1,0 +1,15 @@
+import { useMemo, useState } from 'react';
+import { Landmark, Plus, Trash2 } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+import { createId } from '../lib/id';
+type Forecast={id:string;label:string;date:string;amount:number;kind:'in'|'out'}; const KEY='closerflow.cashflow.v7';
+const load=():Forecast[]=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}};
+export function CashflowPage(){const {invoices,businessExpenses}=useAppData();const [rows,setRows]=useState<Forecast[]>(load);const [form,setForm]=useState({label:'',date:new Date().toISOString().slice(0,10),amount:0,kind:'in' as 'in'|'out'});
+ const save=(x:Forecast[])=>{setRows(x);localStorage.setItem(KEY,JSON.stringify(x))};
+ const automatic=useMemo(()=>[
+ ...invoices.filter(i=>i.status!=='paid').map(i=>({id:'inv-'+i.id,label:`Facture ${i.number}`,date:i.due_date||i.created_at.slice(0,10),amount:i.lines.reduce((s,l)=>s+l.quantity*l.unit_price_ht,0)*(1+i.vat_rate/100),kind:'in' as const})),
+ ...businessExpenses.filter(e=>!e.paid).map(e=>({id:'exp-'+e.id,label:e.label,date:e.expense_date,amount:e.amount_ht*(1+e.vat_rate/100),kind:'out' as const}))],[invoices,businessExpenses]);
+ const all=[...automatic,...rows].sort((a,b)=>a.date.localeCompare(b.date));const balance=all.reduce((s,r)=>s+(r.kind==='in'?r.amount:-r.amount),0);
+ return <><div className="page-title"><div><p className="eyebrow">V7 · FINANCE</p><h1>Trésorerie prévisionnelle</h1></div><Landmark/></div><div className="stats-grid"><div className="stat-card"><small>Solde prévisionnel</small><strong>{balance.toFixed(2)} €</strong></div><div className="stat-card"><small>Mouvements</small><strong>{all.length}</strong></div></div>
+ <section className="panel"><h2>Ajouter une prévision</h2><div className="form-grid"><label>Libellé<input value={form.label} onChange={e=>setForm({...form,label:e.target.value})}/></label><label>Date<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></label><label>Montant<input type="number" value={form.amount} onChange={e=>setForm({...form,amount:Number(e.target.value)})}/></label><label>Type<select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value as 'in'|'out'})}><option value="in">Encaissement</option><option value="out">Décaissement</option></select></label></div><button className="primary-button" onClick={()=>{if(!form.label||form.amount<=0)return;save([{...form,id:createId()},...rows]);setForm({...form,label:'',amount:0})}}><Plus/>Ajouter</button></section>
+ <section className="panel"><h2>Échéancier</h2><div className="list-stack">{all.map(r=><article className="list-card" key={r.id}><div><strong>{r.label}</strong><small>{r.date}</small></div><strong className={r.kind==='in'?'positive':'negative'}>{r.kind==='in'?'+':'-'}{r.amount.toFixed(2)} €</strong>{!r.id.startsWith('inv-')&&!r.id.startsWith('exp-')&&<button className="icon-button danger" onClick={()=>save(rows.filter(x=>x.id!==r.id))}><Trash2/></button>}</article>)}</div></section></>}

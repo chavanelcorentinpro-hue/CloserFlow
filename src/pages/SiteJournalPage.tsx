@@ -1,0 +1,26 @@
+import { useMemo, useState } from 'react';
+import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardList, CloudRain, PackageCheck, Star, Trash2, UserRound } from 'lucide-react';
+import { useAppData } from '../context/AppDataContext';
+import type { SiteJournalCategory } from '../types/domain';
+
+const labels:Record<SiteJournalCategory,string>={progress:'Avancement',incident:'Incident',delivery:'Livraison',client:'Échange client',weather:'Météo',other:'Autre'};
+const icons:Record<SiteJournalCategory,typeof ClipboardList>={progress:CheckCircle2,incident:AlertTriangle,delivery:PackageCheck,client:UserRound,weather:CloudRain,other:ClipboardList};
+
+export function SiteJournalPage(){
+ const {missions,siteJournalEntries,addSiteJournalEntry,toggleSiteJournalImportant,deleteSiteJournalEntry}=useAppData();
+ const [missionId,setMissionId]=useState(missions[0]?.id??''); const [category,setCategory]=useState<SiteJournalCategory>('progress');
+ const [title,setTitle]=useState(''); const [description,setDescription]=useState(''); const [author,setAuthor]=useState('');
+ const [occurredAt,setOccurredAt]=useState(()=>new Date().toISOString().slice(0,16)); const [important,setImportant]=useState(false); const [filter,setFilter]=useState('all');
+ const rows=useMemo(()=>siteJournalEntries.filter(x=>filter==='all'||x.mission_id===filter).sort((a,b)=>b.occurred_at.localeCompare(a.occurred_at)),[siteJournalEntries,filter]);
+ const today=new Date().toISOString().slice(0,10); const todayCount=siteJournalEntries.filter(x=>x.occurred_at.slice(0,10)===today).length; const importantCount=siteJournalEntries.filter(x=>x.important).length;
+ function submit(e:React.FormEvent){e.preventDefault();if(!missionId||!title.trim())return;addSiteJournalEntry({mission_id:missionId,category,title:title.trim(),description:description.trim(),author:author.trim()||'Équipe',occurred_at:new Date(occurredAt).toISOString(),important});setTitle('');setDescription('');setImportant(false)}
+ return <><div className="page-title"><div><p className="eyebrow">CHANTIER</p><h1>Journal de chantier</h1><p>Trace les événements, livraisons, incidents et échanges clients.</p></div></div>
+ <div className="stats-grid"><article className="stat-card"><small>Entrées</small><strong>{siteJournalEntries.length}</strong></article><article className="stat-card"><small>Aujourd’hui</small><strong>{todayCount}</strong></article><article className="stat-card"><small>Importantes</small><strong>{importantCount}</strong></article></div>
+ <section className="panel"><h2>Nouvelle entrée</h2><form className="stack-form" onSubmit={submit}>
+ <label>Chantier<select value={missionId} onChange={e=>setMissionId(e.target.value)} required><option value="">Choisir…</option>{missions.map(m=><option key={m.id} value={m.id}>{m.title}</option>)}</select></label>
+ <div className="form-grid"><label>Type<select value={category} onChange={e=>setCategory(e.target.value as SiteJournalCategory)}>{Object.entries(labels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label><label>Date et heure<input type="datetime-local" value={occurredAt} onChange={e=>setOccurredAt(e.target.value)} required/></label></div>
+ <label>Titre<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ex. Cloisons terminées" required/></label><label>Détails<textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="Travaux réalisés, problème rencontré, décision du client…"/></label>
+ <div className="form-grid"><label>Auteur<input value={author} onChange={e=>setAuthor(e.target.value)} placeholder="Nom du collaborateur"/></label><label className="check-line"><input type="checkbox" checked={important} onChange={e=>setImportant(e.target.checked)}/> Marquer comme important</label></div><button className="primary-button" type="submit">Ajouter au journal</button></form></section>
+ <section className="panel"><div className="section-head"><h2>Historique</h2><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Tous les chantiers</option>{missions.map(m=><option key={m.id} value={m.id}>{m.title}</option>)}</select></div>
+ <div className="journal-list">{rows.length===0?<div className="empty-state">Aucune entrée dans le journal.</div>:rows.map(entry=>{const Icon=icons[entry.category];const mission=missions.find(m=>m.id===entry.mission_id);return <article className={`journal-entry ${entry.important?'important':''}`} key={entry.id}><div className="journal-icon"><Icon/></div><div className="journal-content"><div className="journal-title"><strong>{entry.title}</strong><span>{labels[entry.category]}</span></div><small><CalendarDays size={14}/> {new Date(entry.occurred_at).toLocaleString('fr-FR')} · {mission?.title??'Chantier supprimé'} · {entry.author}</small>{entry.description&&<p>{entry.description}</p>}</div><div className="journal-actions"><button aria-label="Important" onClick={()=>toggleSiteJournalImportant(entry.id)}><Star fill={entry.important?'currentColor':'none'}/></button><button aria-label="Supprimer" onClick={()=>confirm('Supprimer cette entrée ?')&&deleteSiteJournalEntry(entry.id)}><Trash2/></button></div></article>})}</div></section></>;
+}

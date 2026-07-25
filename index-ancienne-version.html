@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.webmanifest">
+<title>CloserFlow Pro</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ font-family:Arial,sans-serif;
+ background:#f3f4f6;
+ color:#111827;
+ margin:0;
+ padding:16px;
+ max-width:760px;
+ margin:auto
+}
+h1{font-size:38px;margin:5px 0}
+h2{margin-top:5px}
+small,.muted{color:#6b7280}
+.card{
+ background:#fff;
+ padding:17px;
+ border-radius:18px;
+ margin:14px 0;
+ box-shadow:0 6px 25px rgba(0,0,0,.05)
+}
+input,select,textarea,button{
+ width:100%;
+ padding:13px;
+ margin:7px 0;
+ border-radius:11px;
+ font-size:16px
+}
+input,select,textarea{
+ border:1px solid #d1d5db;
+ background:white
+}
+button{
+ border:0;
+ background:#111827;
+ color:white;
+ font-weight:bold;
+ cursor:pointer
+}
+.secondary{background:#e5e7eb;color:#111827}
+.success{background:#dcfce7;color:#166534}
+.danger{background:#fee2e2;color:#991b1b}
+.hidden{display:none!important}
+nav{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:8px;
+ position:sticky;
+ top:0;
+ z-index:5;
+ background:#f3f4f6;
+ padding:8px 0
+}
+nav button{font-size:14px}
+.result{
+ border:1px solid #e5e7eb;
+ padding:13px;
+ border-radius:13px;
+ margin:10px 0
+}
+.badge{
+ display:inline-block;
+ background:#e5e7eb;
+ padding:4px 8px;
+ border-radius:20px;
+ font-size:12px;
+ margin:3px
+}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.alert{
+ background:#fff7ed;
+ color:#9a3412;
+ padding:11px;
+ border-radius:11px;
+ margin:10px 0
+}
+#cloudStatus{font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<section id="authView">
+ <h1>CloserFlow</h1>
+ <p class="muted">CRM de prospection connecté au cloud</p>
+
+ <div class="card">
+  <h2>Connexion</h2>
+
+  <label>Adresse e-mail</label>
+  <input id="authEmail" type="email" placeholder="vous@entreprise.fr">
+
+  <label>Mot de passe</label>
+  <input id="authPassword" type="password" minlength="6"
+         placeholder="6 caractères minimum">
+
+  <button id="loginButton">Se connecter</button>
+  <button id="signupButton" class="secondary">Créer mon compte</button>
+
+  <p id="authMessage" class="muted"></p>
+ </div>
+</section>
+
+<section id="appView" class="hidden">
+ <h1>CloserFlow</h1>
+
+ <div class="grid">
+  <div>
+   <small>Compte connecté</small>
+   <div id="accountEmail"></div>
+  </div>
+  <div>
+   <small>Synchronisation</small>
+   <div id="cloudStatus">Connexion…</div>
+  </div>
+ </div>
+
+ <button id="logoutButton" class="secondary">Se déconnecter</button>
+
+ <nav>
+  <button onclick="showTab('dashboard')">Tableau</button>
+  <button class="secondary" onclick="showTab('search')">Recherche</button>
+  <button class="secondary" onclick="showTab('prospects')">Prospects</button>
+ </nav>
+
+ <section id="dashboard" class="tab">
+  <div class="card">
+   <h2>Tableau de bord</h2>
+
+   <div class="grid">
+    <div class="result">
+     <small>Total</small>
+     <h2 id="totalCount">0</h2>
+    </div>
+
+    <div class="result">
+     <small>À contacter</small>
+     <h2 id="todoCount">0</h2>
+    </div>
+
+    <div class="result">
+     <small>Contactés</small>
+     <h2 id="contactedCount">0</h2>
+    </div>
+
+    <div class="result">
+     <small>Intéressés</small>
+     <h2 id="interestedCount">0</h2>
+    </div>
+   </div>
+
+   <button onclick="showTab('search')">Trouver des entreprises</button>
+   <button class="secondary" onclick="exportCSV()">Exporter en CSV</button>
+  </div>
+ </section>
+
+ <section id="search" class="tab hidden">
+  <div class="card">
+   <h2>Recherche automatique</h2>
+
+   <label>Ville</label>
+   <input id="city" placeholder="Annecy">
+
+   <label>Activité</label>
+   <select id="category">
+    <option value='nwr["amenity"="restaurant"]'>Restaurants</option>
+    <option value='nwr["shop"="car_repair"]'>Garages</option>
+    <option value='nwr["office"="estate_agent"]'>Agences immobilières</option>
+    <option value='nwr["shop"="hairdresser"]'>Coiffeurs</option>
+    <option value='nwr["craft"="plumber"]'>Plombiers</option>
+    <option value='nwr["craft"="electrician"]'>Électriciens</option>
+    <option value='nwr["craft"="landscaper"]'>Paysagistes</option>
+    <option value='nwr["tourism"="hotel"]'>Hôtels</option>
+   </select>
+
+   <label>Rayon</label>
+   <select id="radius">
+    <option value="3000">3 km</option>
+    <option value="10000" selected>10 km</option>
+    <option value="20000">20 km</option>
+    <option value="30000">30 km</option>
+   </select>
+
+   <button onclick="searchBusinesses()">Rechercher</button>
+   <p id="searchStatus" class="muted"></p>
+   <div id="results"></div>
+  </div>
+ </section>
+
+ <section id="prospects" class="tab hidden">
+  <div class="card">
+   <h2>Prospects synchronisés</h2>
+   <button class="secondary" onclick="loadProspects()">Actualiser le cloud</button>
+   <div id="prospectList"></div>
+  </div>
+ </section>
+</section>
+
+<script type="module">
+import {createClient} from
+"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const SUPABASE_URL =
+"https://shekbjgoqmyeadvvnwfk.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_P-bD1L0BvB6fTbmgeZ9d7Q_y7u1qpo4";
+
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null;
+let searchResults=[];
+let prospects=[];
+
+const $=id=>document.getElementById(id);
+
+window.showTab=function(id){
+ document.querySelectorAll(".tab").forEach(
+  section=>section.classList.add("hidden")
+ );
+ $(id).classList.remove("hidden");
+
+ if(id==="dashboard")renderDashboard();
+ if(id==="prospects")renderProspects();
+};
+
+function showAuth(message=""){
+ $("authView").classList.remove("hidden");
+ $("appView").classList.add("hidden");
+ $("authMessage").textContent=message;
+}
+
+async function showApp(user){
+ currentUser=user;
+ $("authView").classList.add("hidden");
+ $("appView").classList.remove("hidden");
+ $("accountEmail").textContent=user.email;
+ await loadProspects();
+}
+
+$("signupButton").addEventListener("click",async()=>{
+ const email=$("authEmail").value.trim();
+ const password=$("authPassword").value;
+
+ if(!email||password.length<6){
+  $("authMessage").textContent=
+  "Entre un e-mail valide et un mot de passe de 6 caractères minimum.";
+  return;
+ }
+
+ $("authMessage").textContent="Création du compte…";
+
+ const {data,error}=await supabase.auth.signUp({
+  email,
+  password,
+  options:{
+   emailRedirectTo:
+   "https://chavanelcorentinpro-hue.github.io/CloserFlow/"
+  }
+ });
+
+ if(error){
+  $("authMessage").textContent="Erreur : "+error.message;
+  return;
+ }
+
+ if(data.session){
+  await showApp(data.user);
+ }else{
+  $("authMessage").textContent=
+  "Compte créé. Vérifie ton e-mail puis clique sur le lien de confirmation.";
+ }
+});
+
+$("loginButton").addEventListener("click",async()=>{
+ const email=$("authEmail").value.trim();
+ const password=$("authPassword").value;
+
+ $("authMessage").textContent="Connexion…";
+
+ const {data,error}=await supabase.auth.signInWithPassword({
+  email,
+  password
+ });
+
+ if(error){
+  $("authMessage").textContent="Erreur : "+error.message;
+  return;
+ }
+
+ await showApp(data.user);
+});
+
+$("logoutButton").addEventListener("click",async()=>{
+ await supabase.auth.signOut();
+ currentUser=null;
+ prospects=[];
+ showAuth("Vous êtes déconnecté.");
+});
+
+window.loadProspects=async function(){
+ if(!currentUser)return;
+
+ $("cloudStatus").textContent="Synchronisation…";
+
+ const {data,error}=await supabase
+  .from("prospects")
+  .select("*")
+  .order("created_at",{ascending:false});
+
+ if(error){
+  $("cloudStatus").textContent="Erreur cloud";
+  alert("Erreur Supabase : "+error.message);
+  return;
+ }
+
+ prospects=data||[];
+ $("cloudStatus").textContent="Synchronisé";
+ renderDashboard();
+ renderProspects();
+};
+
+window.searchBusinesses=async function(){
+ const city=$("city").value.trim();
+ const radius=$("radius").value;
+ const category=$("category").value;
+
+ if(!city){
+  alert("Entre une ville.");
+  return;
+ }
+
+ $("searchStatus").textContent="Localisation de la ville…";
+ $("results").innerHTML="";
+
+ try{
+  const geoResponse=await fetch(
+   "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+
+   encodeURIComponent(city+", France")
+  );
+
+  const geo=await geoResponse.json();
+
+  if(!geo.length)throw new Error("Ville introuvable");
+
+  const lat=geo[0].lat;
+  const lon=geo[0].lon;
+
+  $("searchStatus").textContent="Recherche des entreprises…";
+
+  const query=
+  '[out:json][timeout:30];('+
+  category+
+  '(around:'+radius+','+lat+','+lon+'););out center tags;';
+
+  const overpassResponse=await fetch(
+   "https://overpass-api.de/api/interpreter?data="+
+   encodeURIComponent(query)
+  );
+
+  const data=await overpassResponse.json();
+  const seen=new Set();
+
+  searchResults=(data.elements||[]).map(element=>{
+   const tags=element.tags||{};
+
+   return{
+    entreprise:tags.name||tags.brand||"",
+    telephone:tags.phone||tags["contact:phone"]||"",
+    email:tags.email||tags["contact:email"]||"",
+    site_web:tags.website||tags["contact:website"]||"",
+    adresse:[
+     tags["addr:housenumber"],
+     tags["addr:street"],
+     tags["addr:postcode"],
+     tags["addr:city"]
+    ].filter(Boolean).join(" ")
+   };
+  }).filter(item=>{
+   const key=item.entreprise.toLowerCase();
+
+   if(!item.entreprise||seen.has(key))return false;
+
+   seen.add(key);
+   return true;
+  }).slice(0,50);
+
+  $("searchStatus").textContent=
+  searchResults.length+" entreprise(s) trouvée(s).";
+
+  renderSearchResults();
+
+ }catch(error){
+  $("searchStatus").textContent="Erreur : "+error.message;
+ }
+};
+
+function renderSearchResults(){
+ $("results").innerHTML=searchResults.map((business,index)=>`
+  <div class="result">
+   <strong>${escapeHtml(business.entreprise)}</strong>
+
+   <p class="muted">
+    ${escapeHtml(business.adresse||"Adresse non renseignée")}
+   </p>
+
+   ${business.telephone
+    ?`<p>📞 ${escapeHtml(business.telephone)}</p>`:""}
+
+   ${business.email
+    ?`<p>✉️ ${escapeHtml(business.email)}</p>`:""}
+
+   ${business.site_web
+    ?`<p>🌐 ${escapeHtml(business.site_web)}</p>`:""}
+
+   <button onclick="addProspect(${index})">
+    Ajouter au cloud
+   </button>
+  </div>
+ `).join("");
+}
+
+window.addProspect=async function(index){
+ if(!currentUser){
+  alert("Connexion nécessaire.");
+  return;
+ }
+
+ const business=searchResults[index];
+
+ const duplicate=prospects.some(
+  prospect=>
+  prospect.entreprise.toLowerCase()===
+  business.entreprise.toLowerCase()
+ );
+
+ if(duplicate){
+  alert("Cette entreprise est déjà enregistrée.");
+  return;
+ }
+
+ const score=
+  (business.telephone?30:0)+
+  (business.email?30:0)+
+  (business.site_web?20:0)+
+  (business.adresse?20:0);
+
+ $("cloudStatus").textContent="Enregistrement…";
+
+ const {error}=await supabase.from("prospects").insert({
+  user_id:currentUser.id,
+  entreprise:business.entreprise,
+  adresse:business.adresse,
+  telephone:business.telephone,
+  email:business.email,
+  site_web:business.site_web,
+  statut:"À contacter",
+  score
+ });
+
+ if(error){
+  $("cloudStatus").textContent="Erreur cloud";
+  alert("Erreur : "+error.message);
+  return;
+ }
+
+ await loadProspects();
+ alert("Prospect enregistré dans le cloud.");
+};
+
+function renderProspects(){
+ const box=$("prospectList");
+
+ if(!prospects.length){
+  box.innerHTML="<p class='muted'>Aucun prospect.</p>";
+  return;
+ }
+
+ box.innerHTML=prospects.map(prospect=>`
+  <div class="result">
+   <strong>${escapeHtml(prospect.entreprise)}</strong>
+
+   <span class="badge">
+    ${escapeHtml(prospect.statut||"À contacter")}
+   </span>
+
+   <span class="badge">
+    Score ${prospect.score||0}/100
+   </span>
+
+   <p class="muted">
+    ${escapeHtml(prospect.adresse||"")}
+   </p>
+
+   <select onchange="changeStatus(
+    '${prospect.id}',
+    this.value
+   )">
+    ${[
+     "À contacter",
+     "Contacté",
+     "Intéressé",
+     "Client",
+     "Refusé"
+    ].map(status=>`
+     <option
+      ${prospect.statut===status?"selected":""}>
+      ${status}
+     </option>
+    `).join("")}
+   </select>
+
+   ${prospect.telephone?`
+    <button onclick="openWhatsApp('${prospect.id}')">
+     Ouvrir WhatsApp
+    </button>
+   `:""}
+
+   ${prospect.email?`
+    <button class="secondary"
+     onclick="openEmail('${prospect.id}')">
+     Envoyer un e-mail
+    </button>
+   `:""}
+
+   <button class="danger"
+    onclick="deleteProspect('${prospect.id}')">
+    Supprimer
+   </button>
+  </div>
+ `).join("");
+}
+
+window.changeStatus=async function(id,status){
+ const {error}=await supabase
+  .from("prospects")
+  .update({statut:status})
+  .eq("id",id);
+
+ if(error){
+  alert("Erreur : "+error.message);
+  return;
+ }
+
+ await loadProspects();
+};
+
+window.deleteProspect=async function(id){
+ if(!confirm("Supprimer ce prospect ?"))return;
+
+ const {error}=await supabase
+  .from("prospects")
+  .delete()
+  .eq("id",id);
+
+ if(error){
+  alert("Erreur : "+error.message);
+  return;
+ }
+
+ await loadProspects();
+};
+
+function salesMessage(prospect){
+ return `Bonjour,
+
+Je développe CloserFlow, un assistant qui aide les petites entreprises à répondre plus vite aux demandes clients et à suivre leurs prospects.
+
+Je cherche quelques professionnels pour une démonstration adaptée à leur activité.
+
+Puis-je vous envoyer une courte présentation pour ${prospect.entreprise} ?
+
+Si ce message n’est pas pertinent, dites-le-moi et je ne vous recontacterai pas.`;
+}
+
+window.openWhatsApp=function(id){
+ const prospect=prospects.find(item=>item.id===id);
+ let phone=(prospect.telephone||"").replace(/\D/g,"");
+
+ if(phone.startsWith("0")){
+  phone="33"+phone.slice(1);
+ }
+
+ window.open(
+  "https://wa.me/"+phone+
+  "?text="+encodeURIComponent(salesMessage(prospect)),
+  "_blank"
+ );
+
+ changeStatus(id,"Contacté");
+};
+
+window.openEmail=function(id){
+ const prospect=prospects.find(item=>item.id===id);
+
+ location.href=
+  "mailto:"+prospect.email+
+  "?subject="+encodeURIComponent("Démonstration CloserFlow")+
+  "&body="+encodeURIComponent(salesMessage(prospect));
+
+ changeStatus(id,"Contacté");
+};
+
+function renderDashboard(){
+ $("totalCount").textContent=prospects.length;
+
+ $("todoCount").textContent=
+ prospects.filter(item=>item.statut==="À contacter").length;
+
+ $("contactedCount").textContent=
+ prospects.filter(item=>item.statut==="Contacté").length;
+
+ $("interestedCount").textContent=
+ prospects.filter(item=>
+  item.statut==="Intéressé"||
+  item.statut==="Client"
+ ).length;
+}
+
+window.exportCSV=function(){
+ const rows=[
+  [
+   "Entreprise",
+   "Téléphone",
+   "Email",
+   "Site",
+   "Adresse",
+   "Statut",
+   "Score"
+  ],
+  ...prospects.map(item=>[
+   item.entreprise,
+   item.telephone,
+   item.email,
+   item.site_web,
+   item.adresse,
+   item.statut,
+   item.score
+  ])
+ ];
+
+ const csv=rows.map(row=>
+  row.map(value=>
+   `"${String(value||"").replace(/"/g,'""')}"`
+  ).join(";")
+ ).join("\n");
+
+ const blob=new Blob(
+  ["\ufeff"+csv],
+  {type:"text/csv;charset=utf-8"}
+ );
+
+ const link=document.createElement("a");
+ link.href=URL.createObjectURL(blob);
+ link.download="closerflow-prospects.csv";
+ link.click();
+};
+
+function escapeHtml(value=""){
+ return String(value).replace(
+  /[&<>"']/g,
+  character=>({
+   "&":"&amp;",
+   "<":"&lt;",
+   ">":"&gt;",
+   '"':"&quot;",
+   "'":"&#039;"
+  }[character])
+ );
+}
+
+const {data:{session}}=await supabase.auth.getSession();
+
+if(session?.user){
+ await showApp(session.user);
+}else{
+ showAuth();
+}
+
+supabase.auth.onAuthStateChange(async(event,session)=>{
+ if(session?.user&&!currentUser){
+  await showApp(session.user);
+ }
+
+ if(!session){
+  currentUser=null;
+ }
+});
+
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("./sw.js");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CloserFlow</string>
+    <string name="title_activity_main">CloserFlow</string>
+    <string name="package_name">fr.closerflow.app</string>
+    <string name="custom_url_scheme">fr.closerflow.app</string>
+</resources>

@@ -1,0 +1,9 @@
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production PORT=8787 CLOSERFLOW_DATA_DIR=/data
+COPY server ./server
+RUN addgroup -S closerflow && adduser -S closerflow -G closerflow && mkdir -p /data && chown -R closerflow:closerflow /app /data
+USER closerflow
+EXPOSE 8787
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -qO- http://127.0.0.1:8787/api/health || exit 1
+CMD ["node", "server/index.mjs"]

@@ -1,0 +1,52 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    environment:
+      PORT: 8787
+      CLOSERFLOW_DATA_DIR: /data
+      CLOSERFLOW_API_TOKEN: ${CLOSERFLOW_API_TOKEN:?Définir CLOSERFLOW_API_TOKEN dans .env}
+    volumes:
+      - closerflow_data:/data
+    networks: [closerflow]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    environment:
+      CLOSERFLOW_DOMAIN: ${CLOSERFLOW_DOMAIN:-localhost}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [closerflow]
+
+  backup:
+    image: alpine:3.20
+    restart: unless-stopped
+    environment:
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - closerflow_data:/source:ro
+      - ./backups:/backups
+      - ./scripts/backup-loop.sh:/backup-loop.sh:ro
+    command: ["sh", "/backup-loop.sh"]
+    depends_on: [api]
+    networks: [closerflow]
+
+volumes:
+  closerflow_data:
+  caddy_data:
+  caddy_config:
+networks:
+  closerflow:
