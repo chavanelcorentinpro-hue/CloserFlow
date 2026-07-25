@@ -1,3 +1,4 @@
+import { PiggyBank, Zap } from 'lucide-react';
 import { Activity, BarChart3, BellRing, Bot, Boxes, Building2, CalendarDays, Cloud, Gauge, Moon, MessageSquareText, MessagesSquare, FileText, ReceiptText, RotateCcw, Search, Settings, ShoppingCart, UserRoundCheck, Users, KeyRound, TrendingUp, FileCheck2, WalletCards, CalendarClock, BookOpen, Landmark, ClipboardCheck, NotebookPen, Clock3, ScanLine, ListChecks, Rocket, BrainCircuit, Calculator, Camera, BadgeEuro, FolderArchive, Smartphone, KanbanSquare, Sparkles, Layers3, PlugZap, Scale, Wrench, ChartNoAxesCombined, MapPinned, ShieldCheck, ScanSearch, ArchiveRestore, ShieldAlert, CalendarRange, CalendarCheck2, Flag, HeartPulse, GaugeCircle, HandCoins, Radar, Command, Flame} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
