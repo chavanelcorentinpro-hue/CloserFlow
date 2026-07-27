@@ -1,4 +1,4 @@
-export const APP_VERSION = '13.2.0';
+export const APP_VERSION = '35.0.0';
 export const BACKUP_FORMAT = 'closerflow-backup';
 export const SAFETY_KEY = 'closerflow.safety.snapshots.v13_2';
 export const LAST_AUTO_KEY = 'closerflow.safety.lastAuto.v13_2';

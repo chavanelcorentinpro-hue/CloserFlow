@@ -1,9 +1,10 @@
+import { resolveApiUrl } from '../lib/publicWebV56';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type AccountRole = 'admin' | 'manager' | 'employee';
 export type AccountUser = { id:string; email:string; displayName:string; role:AccountRole; workspaceId:string; createdAt:string };
 type Credentials = { email:string; password:string };
-type Registration = Credentials & { displayName:string; workspaceId:string };
+type Registration = Credentials & { displayName:string; workspaceId:string; companyName?:string; plan?:'solo'|'team'|'pro' };
 type InviteAcceptance = { code:string; displayName:string; password:string };
 type AuthValue={
  signedIn:boolean; loading:boolean; user:AccountUser|null; displayName:string; token:string;

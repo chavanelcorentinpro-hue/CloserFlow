@@ -1,85 +1,226 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cloud, CloudDownload, CloudUpload, Copy, RefreshCw, Server, ShieldCheck, Smartphone } from 'lucide-react';
+import {
+  AlertTriangle, BadgeCheck, Cloud, CloudDownload, CloudUpload, Copy, History,
+  Laptop2, RefreshCw, Server, ShieldCheck, ShieldQuestion, Smartphone, Trash2, Wifi
+} from 'lucide-react';
 import { useAppData } from '../context/AppDataContext';
 import { useAuth } from '../context/AuthContext';
-import { checkCloud, getSyncHistory, pullBackup, pushBackup, readCloudConfig, readSyncMeta, saveCloudConfig, SyncConflictError, type CloudConfig, type SyncHistoryItem } from '../lib/cloud';
+import { saveRestorePoint } from '../lib/mobileSafety';
+import {
+  acceptPulledRevision, checkCloud, getPlatformSummary, getSyncHistory, listDevices,
+  peekBackup, pushBackup, readCloudConfig, readDeviceLabel, readSyncMeta, registerDevice,
+  revokeDevice, saveCloudConfig, saveDeviceLabel, trustDevice, SyncConflictError,
+  type CloudConfig, type DeviceRecord, type PlatformSummary, type SyncHistoryItem
+} from '../lib/cloud';
+
+type Busy='test'|'push'|'pull'|'check'|'devices'|null;
 
 export function CloudSyncPage() {
   const { exportBackup, importBackup } = useAppData();
   const { token, user, apiUrl } = useAuth();
-  const [config, setConfig] = useState<CloudConfig>(() => readCloudConfig());
-  const [meta, setMeta] = useState(() => readSyncMeta());
-  const [busy, setBusy] = useState<'test' | 'push' | 'pull' | null>(null);
-  const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
-  const [history, setHistory] = useState<SyncHistoryItem[]>([]);
-  const [conflict, setConflict] = useState<SyncConflictError['current'] | null>(null);
-  useEffect(() => { getSyncHistory(config).then(r => setHistory(r.history)).catch(() => undefined); }, [config.apiUrl, config.apiToken, config.workspaceId]);
-  const lastSync = useMemo(() => meta.lastSyncAt ? new Date(meta.lastSyncAt).toLocaleString('fr-FR') : 'Jamais', [meta.lastSyncAt]);
-  const useAccountSession = () => {
-    if (!user || !token) return;
-    const next = { ...config, apiUrl, apiToken: token, workspaceId: user.workspaceId };
-    setConfig(next); saveCloudConfig(next);
-    setMessage({ type: 'ok', text: 'Session du compte appliquée à la synchronisation.' });
+  const [config,setConfig]=useState<CloudConfig>(()=>readCloudConfig());
+  const [meta,setMeta]=useState(()=>readSyncMeta());
+  const [busy,setBusy]=useState<Busy>(null);
+  const [message,setMessage]=useState<{type:'ok'|'error'|'info';text:string}|null>(null);
+  const [history,setHistory]=useState<SyncHistoryItem[]>([]);
+  const [devices,setDevices]=useState<DeviceRecord[]>([]);
+  const [summary,setSummary]=useState<PlatformSummary|null>(null);
+  const [conflict,setConflict]=useState<SyncConflictError['current']|null>(null);
+  const [deviceLabel,setDeviceLabelState]=useState(()=>readDeviceLabel());
+
+  const accountCloud=!!user&&!!token&&token!=='local-device';
+  const lastSync=useMemo(()=>meta.lastSyncAt?new Date(meta.lastSyncAt).toLocaleString('fr-FR'):'Jamais',[meta.lastSyncAt]);
+  const remoteAhead=meta.remoteRevision!==null&&meta.remoteRevision>meta.revision;
+
+  const refreshHistory=()=>getSyncHistory(config).then(r=>setHistory(r.history)).catch(()=>undefined);
+  const refreshAccount=async()=>{
+    if(!accountCloud)return;
+    setBusy('devices');
+    try{
+      const [d,s]=await Promise.all([listDevices(config),getPlatformSummary(config)]);
+      setDevices(d.devices);
+      setSummary(s);
+    }catch(error){
+      setMessage({type:'error',text:error instanceof Error?error.message:'Impossible de lire les appareils.'});
+    }finally{setBusy(null)}
   };
 
-  const update = (field: keyof CloudConfig, value: string) => {
-    const next = { ...config, [field]: value };
-    setConfig(next);
-    saveCloudConfig(next);
+  useEffect(()=>{refreshHistory()},[config.apiUrl,config.apiToken,config.workspaceId]);
+  useEffect(()=>{if(accountCloud)refreshAccount()},[config.apiUrl,config.apiToken,config.workspaceId,accountCloud]);
+
+  const update=(field:keyof CloudConfig,value:string)=>{
+    const next={...config,[field]:value};
+    setConfig(next);saveCloudConfig(next);
   };
 
-  const run = async (kind: 'test' | 'push' | 'pull') => {
-    setBusy(kind); setMessage(null);
-    try {
-      if (kind === 'test') {
-        const health = await checkCloud(config);
-        setMessage({ type: 'ok', text: `${health.service} répond correctement.` });
-      } else if (kind === 'push') {
-        const result = await pushBackup(config, exportBackup());
-        setConflict(null);
-        getSyncHistory(config).then(r => setHistory(r.history)).catch(() => undefined);
-        setMeta(readSyncMeta());
-        setMessage({ type: 'ok', text: `Données envoyées. Révision cloud ${result.revision}.` });
-      } else {
-        const result = await pullBackup(config);
-        if (!confirm(`Remplacer les données locales par la révision cloud ${result.revision} ?`)) return;
-        importBackup(result.payload);
-        setMeta(readSyncMeta());
-        setMessage({ type: 'ok', text: `Révision ${result.revision} téléchargée et appliquée.` });
-      }
-    } catch (error) {
-      if (error instanceof SyncConflictError) setConflict(error.current);
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Échec de la synchronisation.' });
-    } finally { setBusy(null); }
+  const useAccountSession=async()=>{
+    if(!user||!token||token==='local-device'){
+      setMessage({type:'error',text:'Connecte un compte serveur pour utiliser la synchronisation multi-appareils.'});
+      return;
+    }
+    const next={...config,apiUrl,apiToken:token,workspaceId:user.workspaceId};
+    setConfig(next);saveCloudConfig(next);
+    try{
+      await registerDevice(next,deviceLabel);
+      setMessage({type:'ok',text:'Compte et appareil associés à la synchronisation.'});
+      const [d,s]=await Promise.all([listDevices(next),getPlatformSummary(next)]);
+      setDevices(d.devices);setSummary(s);
+    }catch(error){
+      setMessage({type:'error',text:error instanceof Error?error.message:'Association impossible.'});
+    }
+  };
+
+  const saveLabel=async()=>{
+    saveDeviceLabel(deviceLabel);
+    if(accountCloud){
+      try{await registerDevice(config,deviceLabel);await refreshAccount();setMessage({type:'ok',text:'Nom de l’appareil enregistré.'})}
+      catch(error){setMessage({type:'error',text:error instanceof Error?error.message:'Enregistrement impossible.'})}
+    }else setMessage({type:'info',text:'Nom enregistré localement. Associe ensuite un compte serveur.'});
+  };
+
+  const test=async()=>{
+    setBusy('test');setMessage(null);
+    try{
+      const health=await checkCloud(config);
+      setMessage({type:'ok',text:`${health.service} ${health.version?`v${health.version} `:''}répond correctement.`});
+    }catch(error){setMessage({type:'error',text:error instanceof Error?error.message:'Serveur inaccessible.'})}
+    finally{setBusy(null)}
+  };
+
+  const checkRemote=async()=>{
+    setBusy('check');setMessage(null);
+    try{
+      const remote=await peekBackup(config);
+      setMeta(readSyncMeta());
+      if(remote.revision>readSyncMeta().revision)setMessage({type:'info',text:`Révision ${remote.revision} disponible dans le cloud. Tes données locales ne sont pas remplacées.`});
+      else if(remote.revision===readSyncMeta().revision)setMessage({type:'ok',text:`Local et cloud sont alignés sur la révision ${remote.revision}.`});
+      else setMessage({type:'info',text:`Le cloud est en révision ${remote.revision}.`});
+    }catch(error){setMessage({type:'error',text:error instanceof Error?error.message:'Vérification impossible.'})}
+    finally{setBusy(null)}
+  };
+
+  const push=async(force=false)=>{
+    setBusy('push');setMessage(null);
+    try{
+      if(accountCloud)await registerDevice(config,deviceLabel);
+      const result=await pushBackup(config,exportBackup(),force);
+      setConflict(null);setMeta(readSyncMeta());refreshHistory();if(accountCloud)refreshAccount();
+      setMessage({type:'ok',text:`Synchronisation envoyée. Révision cloud ${result.revision}.`});
+    }catch(error){
+      if(error instanceof SyncConflictError)setConflict(error.current);
+      setMessage({type:'error',text:error instanceof Error?error.message:'Échec de l’envoi.'});
+    }finally{setBusy(null)}
+  };
+
+  const pull=async()=>{
+    setBusy('pull');setMessage(null);
+    try{
+      const result=await peekBackup(config);
+      if(!confirm(`Installer la révision cloud ${result.revision} sur cet appareil ? Une sauvegarde locale sera créée avant remplacement.`))return;
+      saveRestorePoint('before-restore');
+      importBackup(result.payload);
+      acceptPulledRevision(result);
+      setMeta(readSyncMeta());setConflict(null);
+      setMessage({type:'ok',text:`Révision ${result.revision} installée. Un point de restauration local a été créé.`});
+    }catch(error){
+      setMessage({type:'error',text:error instanceof Error?error.message:'Échec du téléchargement.'});
+    }finally{setBusy(null)}
+  };
+
+  const restoreHistory=(item:SyncHistoryItem)=>{
+    if(!confirm(`Restaurer localement la révision ${item.revision} ?`))return;
+    saveRestorePoint('before-restore');
+    importBackup(item.payload);
+    setMessage({type:'ok',text:`Révision historique ${item.revision} restaurée localement. Le cloud n’a pas été modifié.`});
+  };
+
+  const setTrust=async(id:string)=>{
+    try{await trustDevice(config,id);await refreshAccount();setMessage({type:'ok',text:'Appareil marqué comme fiable.'})}
+    catch(error){setMessage({type:'error',text:error instanceof Error?error.message:'Action impossible.'})}
+  };
+  const revoke=async(id:string)=>{
+    if(!confirm('Révoquer cet appareil de l’espace de travail ?'))return;
+    try{await revokeDevice(config,id);await refreshAccount();setMessage({type:'ok',text:'Appareil révoqué.'})}
+    catch(error){setMessage({type:'error',text:error instanceof Error?error.message:'Révocation impossible.'})}
   };
 
   return <>
-    <div className="page-title cloud-title"><div><p className="eyebrow">CLOUD ALPHA</p><h1>Synchronisation</h1><p>Connecte cette installation à l’API CloserFlow de développement.</p></div><Cloud/></div>
-    <section className="cloud-status-grid">
-      <article><Smartphone/><div><span>Appareil</span><strong>{config.deviceId.slice(0, 18)}…</strong></div><button className="icon-button" onClick={() => navigator.clipboard.writeText(config.deviceId)} title="Copier"><Copy/></button></article>
-      <article><RefreshCw/><div><span>Dernière synchronisation</span><strong>{lastSync}</strong><small>Révision {meta.revision}</small></div></article>
-      <article><ShieldCheck/><div><span>Mode actuel</span><strong>API de développement</strong><small>Jeton Bearer requis</small></div></article>
+    <div className="page-title cloud-title">
+      <div><p className="eyebrow">CLOSERFLOW 34 · MULTI-DEVICE</p><h1>Cloud & synchronisation</h1><p>Synchronise plusieurs appareils avec révisions, conflits, historique et sauvegarde de sécurité avant restauration.</p></div>
+      <Cloud/>
+    </div>
+
+    <section className="v34-status">
+      <article><Smartphone/><div><span>Appareil</span><strong>{deviceLabel}</strong><small>{config.deviceId.slice(0,18)}…</small></div></article>
+      <article><RefreshCw/><div><span>Dernière synchro</span><strong>{lastSync}</strong><small>Local : révision {meta.revision}</small></div></article>
+      <article className={remoteAhead?'warning':''}><Cloud/><div><span>Cloud connu</span><strong>{meta.remoteRevision===null?'Non vérifié':`Révision ${meta.remoteRevision}`}</strong><small>{remoteAhead?'Une version distante est plus récente':'Aucun retard détecté'}</small></div></article>
+      <article><Wifi/><div><span>Mode</span><strong>{accountCloud?'Compte serveur':'Configuration manuelle'}</strong><small>{summary?`${summary.devices} appareil(s) actif(s)`:'Synchronisation explicite'}</small></div></article>
     </section>
 
-    <section className="form-card cloud-config">
-      <div className="section-heading"><div><p className="eyebrow">CONNEXION</p><h2>Serveur</h2></div><Server/></div>
-      <label>URL de l’API<input value={config.apiUrl} onChange={e => update('apiUrl', e.target.value)} placeholder="http://localhost:8787"/></label>
-      <label>Espace de travail<input value={config.workspaceId} onChange={e => update('workspaceId', e.target.value)} placeholder="default"/></label>
-      <label>Jeton API<input type="password" value={config.apiToken} onChange={e => update('apiToken', e.target.value)} placeholder="dev-token"/></label>
-      <div className="cloud-config-actions"><button className="ghost" type="button" onClick={useAccountSession}><ShieldCheck/>Utiliser mon compte</button><button className="ghost" disabled={!!busy} onClick={() => run('test')}><Server/>{busy === 'test' ? 'Test en cours…' : 'Tester la connexion'}</button></div>
-      {message && <p className={`cloud-message ${message.type}`}>{message.text}</p>}
+    {message&&<div className={`notice v34-message ${message.type}`}><BadgeCheck/><span>{message.text}</span></div>}
+    {remoteAhead&&<div className="notice v34-warning"><AlertTriangle/><span><strong>Cloud plus récent.</strong> Vérifie ou récupère les données avant d’envoyer depuis cet appareil.</span></div>}
+
+    <section className="v34-grid">
+      <div className="form-card">
+        <div className="section-heading"><div><p className="eyebrow">APPAREIL</p><h2>Identité de cette installation</h2></div><Laptop2/></div>
+        <label>Nom de l’appareil<input value={deviceLabel} onChange={e=>setDeviceLabelState(e.target.value)} placeholder="Téléphone chantier"/></label>
+        <div className="cloud-config-actions">
+          <button className="ghost" onClick={saveLabel}>Enregistrer le nom</button>
+          <button className="icon-button" onClick={()=>navigator.clipboard.writeText(config.deviceId)} title="Copier l’identifiant"><Copy/></button>
+        </div>
+      </div>
+
+      <div className="form-card cloud-config">
+        <div className="section-heading"><div><p className="eyebrow">SERVEUR</p><h2>Connexion</h2></div><Server/></div>
+        <label>URL de l’API<input value={config.apiUrl} onChange={e=>update('apiUrl',e.target.value)} placeholder="https://api.exemple.fr"/></label>
+        <label>Espace de travail<input value={config.workspaceId} onChange={e=>update('workspaceId',e.target.value)} placeholder="entreprise"/></label>
+        <label>Jeton API<input type="password" value={config.apiToken} onChange={e=>update('apiToken',e.target.value)} placeholder="Jeton Bearer"/></label>
+        <div className="cloud-config-actions">
+          <button className="ghost" onClick={useAccountSession}><ShieldCheck/>Utiliser mon compte</button>
+          <button className="ghost" disabled={!!busy} onClick={test}><Server/>{busy==='test'?'Test…':'Tester'}</button>
+        </div>
+      </div>
     </section>
 
-    <section className="cloud-actions">
-      <button onClick={() => run('push')} disabled={!!busy}><CloudUpload/><div><strong>{busy === 'push' ? 'Envoi en cours…' : 'Envoyer vers le cloud'}</strong><small>Crée une nouvelle révision du dossier complet.</small></div></button>
-      <button onClick={() => run('pull')} disabled={!!busy}><CloudDownload/><div><strong>{busy === 'pull' ? 'Téléchargement…' : 'Récupérer du cloud'}</strong><small>Remplace les données locales après confirmation.</small></div></button>
+    <section className="cloud-actions v34-actions">
+      <button onClick={checkRemote} disabled={!!busy}><RefreshCw/><div><strong>{busy==='check'?'Vérification…':'Vérifier le cloud'}</strong><small>Compare les révisions sans modifier les données locales.</small></div></button>
+      <button onClick={()=>push(false)} disabled={!!busy||remoteAhead}><CloudUpload/><div><strong>{busy==='push'?'Envoi…':'Envoyer cet appareil'}</strong><small>Crée une nouvelle révision si le cloud n’est pas plus récent.</small></div></button>
+      <button onClick={pull} disabled={!!busy}><CloudDownload/><div><strong>{busy==='pull'?'Téléchargement…':'Récupérer le cloud'}</strong><small>Crée d’abord un point de restauration local.</small></div></button>
     </section>
 
+    {conflict&&<section className="form-card sync-conflict">
+      <div><p className="eyebrow">CONFLIT</p><h2>Une autre installation a modifié le cloud</h2><p>Révision {conflict.revision}, mise à jour le {new Date(conflict.updatedAt).toLocaleString('fr-FR')} depuis {conflict.deviceId.slice(0,18)}…</p></div>
+      <div className="cloud-config-actions">
+        <button className="ghost" onClick={pull}><CloudDownload/>Récupérer d’abord</button>
+        <button onClick={()=>{if(confirm('Écraser la version cloud avec cet appareil ? Cette action doit rester exceptionnelle.'))push(true)}}><CloudUpload/>Forcer l’envoi local</button>
+      </div>
+    </section>}
 
-    {conflict && <section className="form-card sync-conflict"><div><p className="eyebrow">CONFLIT DÉTECTÉ</p><h2>Une autre installation a envoyé des données</h2><p>Révision cloud {conflict.revision}, mise à jour le {new Date(conflict.updatedAt).toLocaleString('fr-FR')}.</p></div><div className="cloud-config-actions"><button className="ghost" onClick={() => run('pull')}><CloudDownload/>Récupérer le cloud</button><button onClick={async()=>{if(!confirm('Écraser la version cloud avec les données de cet appareil ?'))return;setBusy('push');try{const result=await pushBackup(config,exportBackup(),true);setMeta(readSyncMeta());setConflict(null);setMessage({type:'ok',text:`Conflit résolu. Révision ${result.revision} envoyée.`})}catch(e){setMessage({type:'error',text:e instanceof Error?e.message:'Échec.'})}finally{setBusy(null)}}}><CloudUpload/>Forcer l’envoi local</button></div></section>}
+    {accountCloud&&<section className="form-card">
+      <div className="section-heading"><div><p className="eyebrow">MULTI-APPAREILS</p><h2>Appareils du compte</h2></div><Smartphone/></div>
+      <div className="v34-device-list">
+        {devices.length===0?<p>Aucun appareil enregistré.</p>:devices.map(d=><article key={d.id} className={d.revokedAt?'revoked':''}>
+          <div><strong>{d.label}</strong><small>{d.platform} · vu {new Date(d.lastSeenAt).toLocaleString('fr-FR')}</small></div>
+          <span>{d.trusted?'Fiable':'À valider'}</span>
+          {!d.revokedAt&&user?.role!=='employee'&&!d.trusted&&<button className="ghost" onClick={()=>setTrust(d.id)}><ShieldCheck/>Fiabiliser</button>}
+          {!d.revokedAt&&user?.role==='admin'&&d.deviceId!==config.deviceId&&<button className="ghost danger" onClick={()=>revoke(d.id)}><Trash2/>Révoquer</button>}
+        </article>)}
+      </div>
+      {summary&&<p className="muted-copy">Workspace {summary.workspaceId} · révision serveur {summary.revision} · dernière mise à jour {summary.updatedAt?new Date(summary.updatedAt).toLocaleString('fr-FR'):'aucune'}.</p>}
+    </section>}
 
-    <section className="form-card sync-history"><div className="section-heading"><div><p className="eyebrow">HISTORIQUE</p><h2>Révisions précédentes</h2></div><RefreshCw/></div>{history.length===0?<p>Aucune révision précédente.</p>:<div className="sync-history-list">{history.map(item=><article key={`${item.revision}-${item.updatedAt}`}><div><strong>Révision {item.revision}</strong><small>{new Date(item.updatedAt).toLocaleString('fr-FR')}</small></div><span>{item.deviceId.slice(0,12)}…</span><button className="ghost" onClick={()=>{if(confirm(`Restaurer la révision ${item.revision} sur cet appareil ?`)){importBackup(item.payload);setMessage({type:'ok',text:`Révision ${item.revision} restaurée localement.`})}}}>Restaurer</button></article>)}</div>}</section>
+    <section className="form-card sync-history">
+      <div className="section-heading"><div><p className="eyebrow">HISTORIQUE</p><h2>Révisions précédentes</h2></div><History/></div>
+      {history.length===0?<p>Aucune révision précédente.</p>:<div className="sync-history-list">{history.map(item=><article key={`${item.revision}-${item.updatedAt}`}>
+        <div><strong>Révision {item.revision}</strong><small>{new Date(item.updatedAt).toLocaleString('fr-FR')}</small></div>
+        <span>{item.deviceId.slice(0,12)}…</span>
+        <button className="ghost" onClick={()=>restoreHistory(item)}>Restaurer localement</button>
+      </article>)}</div>}
+    </section>
 
-    <aside className="cloud-warning"><strong>Fondation SaaS, pas encore production.</strong><p>Cette alpha fournit un protocole de synchronisation réel et un serveur local de référence. Le chiffrement au repos, la gestion de comptes distants, les conflits avancés et l’hébergement sécurisé restent à mettre en place avant une utilisation commerciale.</p></aside>
+    <aside className="cloud-warning">
+      <ShieldQuestion/>
+      <div><strong>Synchronisation prudente.</strong><p>V34 ne fusionne pas silencieusement deux jeux de données différents. Un conflit bloque l’envoi afin d’éviter d’écraser le travail d’un autre appareil.</p></div>
+    </aside>
   </>;
 }

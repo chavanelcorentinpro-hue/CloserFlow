@@ -1,17 +1,18 @@
-# CloserFlow 32.0.0 Beta
+# CloserFlow 35.0.0 Beta
 
-Cette version consolide le canal bêta Android.
+## Nouveau
+- Team Workspace.
+- Invitations et rôles centralisés.
+- File de demandes à approuver.
+- Approbation/refus avec note.
+- Journal auditable des décisions.
 
-## À tester en priorité
-- démarrage de l'application ;
-- création client ;
-- création et validation d'un devis ;
-- création d'une mission ;
-- facturation ;
-- paiement ;
-- sauvegarde/restauration ;
-- navigation mobile ;
-- modules V17 à V24.
-
-## Statut
-Le paquet source est validé statiquement. L'APK n'est considéré comme validé que lorsqu'il est réellement produit par la CI GitHub et installé sur un téléphone Android.
+## Test V35
+1. Compiler l'APK via GitHub Actions.
+2. Installer la V35 par-dessus la V34.
+3. Vérifier les données existantes.
+4. Avec un compte serveur, ouvrir Plus → CloserFlow 35 · Team Workspace.
+5. Créer une invitation.
+6. Créer une demande d'achat.
+7. La valider depuis un autre compte manager/admin.
+8. Vérifier le journal des décisions.

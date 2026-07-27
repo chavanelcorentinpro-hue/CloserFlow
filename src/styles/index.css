@@ -213,3 +213,119 @@
 
 /* V25 production safety */
 .production-crash{min-height:100vh;display:grid;place-items:center;padding:24px}.production-crash .panel{max-width:620px;width:100%}
+
+/* CloserFlow 33 · Data Health */
+.v33-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:16px 0}
+.v33-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:6px}
+.v33-kpis span{opacity:.68;font-size:.78rem}.v33-kpis strong{font-size:1.25rem}
+.v33-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
+.v33-findings,.v33-readiness{display:grid;gap:9px}
+.v33-finding{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;padding:12px;border:1px solid var(--border,#ddd);border-radius:13px;text-decoration:none;color:inherit}
+.v33-finding small{display:block;opacity:.68;margin-top:3px}
+.v33-finding.critical{border-color:#ef4444}.v33-finding.warning{border-color:#f59e0b}
+.v33-readiness article{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:13px;padding:12px}
+.v33-readiness small{display:block;opacity:.68;margin-top:3px}.v33-readiness b{text-align:right}
+.v33-success{border-color:#22c55e}
+@media(max-width:900px){.v33-kpis{grid-template-columns:repeat(2,1fr)}.v33-grid{grid-template-columns:1fr}}
+
+/* CloserFlow 34 · Cloud multi-device */
+.v34-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v34-status article{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}
+.v34-status article.warning{border-color:#f59e0b}
+.v34-status span,.v34-status small{display:block;opacity:.68}.v34-status strong{display:block;margin:2px 0}
+.v34-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;margin-bottom:16px}
+.v34-actions{grid-template-columns:repeat(3,1fr)}
+.v34-message.info{border-color:#60a5fa}.v34-warning{border-color:#f59e0b}
+.v34-device-list{display:grid;gap:8px}
+.v34-device-list article{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;border:1px solid var(--border,#ddd);border-radius:13px;padding:11px}
+.v34-device-list article.revoked{opacity:.5}.v34-device-list small{display:block;opacity:.68;margin-top:3px}
+@media(max-width:900px){.v34-status{grid-template-columns:repeat(2,1fr)}.v34-grid{grid-template-columns:1fr}.v34-actions{grid-template-columns:1fr}.v34-device-list article{grid-template-columns:1fr auto}}
+
+/* CloserFlow 35 · Team Workspace */
+.v35-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v35-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}
+.v35-kpis span,.v35-kpis small{opacity:.68}.v35-kpis strong{font-size:1.3rem}
+.v35-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.v35-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.v35-form label{display:grid;gap:5px}.v35-form input,.v35-form select,.v35-form textarea{padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;background:transparent;color:inherit}
+.v35-wide{grid-column:1/-1}.v35-invites,.v35-members,.v35-audit,.v35-approval-list{display:grid;gap:8px;margin-top:12px}
+.v35-invites article,.v35-members article{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px}
+.v35-invites small,.v35-members small,.v35-audit small{display:block;opacity:.68;margin-top:3px}.v35-invites code{display:block;margin-top:6px;font-size:.75rem}
+.v35-approval-list>article{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;border:1px solid var(--border,#ddd);border-radius:14px;padding:12px}
+.v35-approval-main small{display:block;opacity:.68;margin:4px 0}.v35-approval-main p{margin:6px 0 0}
+.v35-approval-value{display:grid;gap:7px;text-align:right}.v35-approval-value b{display:flex;gap:5px;align-items:center;justify-content:flex-end}
+.v35-approval-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.v35-approve{border-color:#22c55e!important}
+.v35-audit article{border-bottom:1px solid var(--border,#ddd);padding:8px 0}.v35-audit p{margin:4px 0 0}
+@media(max-width:900px){.v35-kpis{grid-template-columns:repeat(2,1fr)}.v35-grid{grid-template-columns:1fr}.v35-approval-list>article{grid-template-columns:1fr}.v35-approval-value{text-align:left}.v35-approval-actions{justify-content:flex-start}}
+@media(max-width:560px){.v35-form{grid-template-columns:1fr}.v35-wide{grid-column:auto}}
+
+/* CloserFlow 48 */
+.v48-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.v48-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}.v48-kpis article.warning{border-color:#f59e0b}.v48-kpis span,.v48-kpis small{opacity:.68}.v48-kpis strong{font-size:1.3rem}.v48-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.v48-grid label{display:grid;gap:5px;margin:8px 0}.v48-grid input,.v48-grid select{padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;background:transparent;color:inherit}.v48-workload,.v48-list{display:grid;gap:8px}.v48-workload article,.v48-list article{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px}.v48-list article.warning{border-color:#f59e0b}.v48-list small,.v48-workload small{display:block;opacity:.68}.v48-list em{display:flex;align-items:center;gap:5px;font-style:normal}@media(max-width:900px){.v48-kpis{grid-template-columns:repeat(2,1fr)}.v48-grid{grid-template-columns:1fr}.v48-list article,.v48-workload article{grid-template-columns:1fr auto}}
+
+/* CloserFlow 49 */
+.v49-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.v49-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}.v49-kpis article.warning{border-color:#f59e0b}.v49-kpis span{opacity:.68}.v49-kpis strong{font-size:1.3rem}.v49-toggle{display:flex;gap:10px;align-items:center}.v49-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0}.v49-supplier-total{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.v49-list{display:grid;gap:8px}.v49-list article{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px}.v49-list article.urgent{border-color:#f59e0b}.v49-list small{display:block;opacity:.68;margin-top:3px}.v49-list p{margin:5px 0 0;font-size:.82rem}@media(max-width:900px){.v49-kpis{grid-template-columns:repeat(2,1fr)}.v49-grid{grid-template-columns:1fr}.v49-list article{grid-template-columns:1fr auto}}
+
+/* CloserFlow 50 · Purchase Orders */
+.v50-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v50-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}.v50-kpis span{opacity:.68}.v50-kpis strong{font-size:1.3rem}
+.v50-layout{display:grid;grid-template-columns:320px 1fr;gap:16px}.v50-orders{display:grid;gap:7px}.v50-orders button{display:grid;grid-template-columns:1fr auto;gap:6px;text-align:left;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px;background:transparent;color:inherit}.v50-orders button.active{outline:2px solid currentColor}.v50-orders small{display:block;opacity:.68}.v50-orders b{grid-column:2;text-align:right}
+.v50-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.v50-fields label,.v50-layout>div>label{display:grid;gap:5px}.v50-fields input,.v50-lines input,.v50-lines select,.v50-layout textarea{padding:9px;border:1px solid var(--border,#ddd);border-radius:9px;background:transparent;color:inherit}
+.v50-lines{display:grid;gap:7px;margin:12px 0}.v50-lines article{display:grid;grid-template-columns:2fr 90px 110px 85px 120px auto;gap:8px;align-items:center;border:1px solid var(--border,#ddd);border-radius:11px;padding:8px}.v50-lines b{text-align:right}.v50-total{display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap;margin:14px 0}.v50-total span{display:grid;gap:3px;text-align:right}
+@media(max-width:1000px){.v50-layout{grid-template-columns:1fr}.v50-fields{grid-template-columns:1fr}.v50-lines article{grid-template-columns:1fr 1fr}.v50-lines article>:first-child{grid-column:1/-1}}
+
+/* CloserFlow 51 · Supplier Invoice Reconciliation */
+.v51-match{display:grid;gap:8px;margin:12px 0;padding:10px;border:1px solid var(--border,#ddd);border-radius:12px}.v51-match label{display:grid;gap:5px}.v51-match select{padding:9px;border:1px solid var(--border,#ddd);border-radius:9px;background:transparent;color:inherit}
+.v51-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.v51-summary span{padding:6px 9px;border:1px solid var(--border,#ddd);border-radius:999px;font-size:.8rem}
+.v51-review{display:grid;gap:8px}.v51-review article{display:grid;grid-template-columns:1fr auto auto auto;gap:9px;align-items:center;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px}.v51-review article.warning{border-color:#f59e0b}.v51-review small{display:block;opacity:.68}.v51-review p{margin:4px 0}.v51-review em{font-style:normal;font-size:.78rem}.v51-warning{border-color:#f59e0b}
+.v51-price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v51-price-grid article{border:1px solid var(--border,#ddd);border-radius:15px;padding:12px;display:grid;gap:6px}.v51-price-grid small{opacity:.68}.v51-price-grid em{display:flex;gap:5px;align-items:center;font-style:normal}.v51-price-grid em.bad{font-weight:800}.warning-copy{display:flex!important;align-items:center;gap:5px}
+@media(max-width:900px){.v51-review article{grid-template-columns:1fr auto}.v51-price-grid{grid-template-columns:1fr}}
+
+/* CloserFlow 52 · Invoice Stock & Margin */
+.v52-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v52-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}.v52-kpis span{opacity:.68}.v52-kpis strong{font-size:1.25rem}
+.v52-select{display:grid;gap:6px}.v52-select select{padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;background:transparent;color:inherit}
+.v52-summary{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.v52-summary span{padding:8px 10px;border:1px solid var(--border,#ddd);border-radius:10px}
+.v52-list,.v52-history{display:grid;gap:8px}.v52-list article,.v52-history article{display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:12px;padding:10px}
+.v52-list article.warning{border-color:#f59e0b}.v52-list small,.v52-history small{display:block;opacity:.68}.v52-warning{border-color:#f59e0b}
+@media(max-width:900px){.v52-kpis{grid-template-columns:repeat(2,1fr)}.v52-list article,.v52-history article{grid-template-columns:1fr auto}}
+
+/* CloserFlow 53 · Real Project Margin */
+.v53-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v53-kpis article,.v53-status article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}
+.v53-kpis article.warning,.v53-status article.warning{border-color:#f59e0b}.v53-kpis article.critical,.v53-status article.critical{border-color:#ef4444}
+.v53-kpis span,.v53-status span{opacity:.68}.v53-kpis strong{font-size:1.25rem}
+.v53-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v53-settings label{display:grid;gap:5px}.v53-settings input{padding:10px;border:1px solid var(--border,#ddd);border-radius:10px;background:transparent;color:inherit}
+.v53-status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.v53-list{display:grid;gap:12px}.v53-list>article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}.v53-list>article.watch{border-color:#f59e0b}.v53-list>article.critical{border-color:#ef4444}
+.v53-title{display:flex;justify-content:space-between;gap:12px}.v53-title small{display:block;opacity:.68;margin-top:3px}.v53-title b{font-size:1.3rem}
+.v53-costs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.v53-costs span{display:flex;gap:6px;align-items:center;padding:8px;border:1px solid var(--border,#ddd);border-radius:10px}.v53-costs strong{margin-left:auto}
+.v53-result{display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap}.v53-warnings{display:grid;gap:5px;margin-top:10px}.v53-warnings p{display:flex;gap:6px;align-items:center;margin:0}
+@media(max-width:900px){.v53-kpis{grid-template-columns:repeat(2,1fr)}.v53-settings,.v53-costs{grid-template-columns:1fr}.v53-status{grid-template-columns:1fr}}
+
+/* CloserFlow 54 · Commercial Launch */
+.v54-public{max-width:1180px;margin:0 auto;padding:0 18px 60px}.v54-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0}.v54-nav nav{display:flex;gap:16px}.v54-nav a{text-decoration:none;color:inherit}
+.v54-hero{display:grid;grid-template-columns:1.5fr .8fr;gap:24px;align-items:center;padding:70px 0}.v54-hero h1{font-size:clamp(2.2rem,6vw,4.8rem);line-height:1.02;margin:8px 0 16px}.v54-hero p{font-size:1.1rem;max-width:760px}.v54-hero-card{border:1px solid var(--border,#ddd);border-radius:24px;padding:24px;display:grid;gap:10px}.v54-hero-card strong{font-size:1.35rem}
+.v54-features{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:30px 0}.v54-features article{border:1px solid var(--border,#ddd);border-radius:16px;padding:16px}.v54-features p{opacity:.72}
+.v54-pricing{padding:50px 0}.v54-plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.v54-plan-grid article,.v54-plan-grid>button{border:1px solid var(--border,#ddd);border-radius:18px;padding:18px;display:grid;gap:10px;background:transparent;color:inherit;text-align:left}.v54-plan-grid article.popular{outline:2px solid currentColor}.v54-plan-grid em{font-style:normal;font-size:.8rem}.v54-plan-grid article>strong{font-size:2rem}.v54-plan-grid small{font-size:.9rem}.v54-plan-grid>button.selected{outline:2px solid currentColor}
+.v54-table{margin-top:22px;border:1px solid var(--border,#ddd);border-radius:16px;overflow:hidden}.v54-row{display:grid;grid-template-columns:2fr repeat(3,1fr);padding:10px;border-bottom:1px solid var(--border,#ddd)}.v54-row.head{font-weight:800}.v54-row b{text-align:center}
+.v54-global{display:flex;gap:14px;align-items:flex-start;padding:26px;border:1px solid var(--border,#ddd);border-radius:18px;margin:40px 0}.v54-faq details{border-bottom:1px solid var(--border,#ddd);padding:14px 0}.v54-faq summary{font-weight:800;cursor:pointer}
+.v54-sub{display:grid;gap:16px}.v54-cycle{display:flex;gap:8px}.v54-cycle button{padding:8px 12px;border-radius:999px;border:1px solid var(--border,#ddd);background:transparent;color:inherit}.v54-cycle button.active{font-weight:800}.v54-checkout{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.v54-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.v54-kpis article{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:5px}.v54-kpis span{opacity:.68}.v54-kpis strong{font-size:1.3rem}
+@media(max-width:900px){.v54-hero{grid-template-columns:1fr}.v54-features{grid-template-columns:repeat(2,1fr)}.v54-plan-grid{grid-template-columns:1fr}.v54-nav nav{display:none}.v54-checkout{grid-template-columns:1fr}.v54-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.v54-features{grid-template-columns:1fr}.v54-row{grid-template-columns:1.5fr repeat(3,.7fr);font-size:.8rem}}
+
+/* CloserFlow 55 · Self-Service Trial */
+.v55-signup-page{min-height:100vh;display:grid;grid-template-columns:1fr 520px;gap:40px;align-items:center;max-width:1200px;margin:auto;padding:36px 24px}
+.v55-signup-copy h1{font-size:clamp(2.4rem,5vw,4.8rem);line-height:1.02;margin:10px 0 18px}.v55-signup-copy>p{font-size:1.08rem;max-width:650px}.v55-back{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:inherit;margin-bottom:50px}
+.v55-benefits{display:grid;grid-template-columns:repeat(2,max-content);gap:10px 20px;margin-top:24px}.v55-benefits span{display:flex;gap:6px;align-items:center}
+.v55-signup-card{border:1px solid var(--border,#ddd);border-radius:24px;padding:24px}.v55-signup-card form{display:grid;gap:12px}.v55-signup-card label{display:grid;gap:5px}.v55-signup-card input{padding:11px;border:1px solid var(--border,#ddd);border-radius:10px;background:transparent;color:inherit}.v55-signup-card label small{opacity:.65}.v55-create{width:100%;justify-content:center;margin-top:4px}
+.v55-plan-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}.v55-plan-switch button{border:1px solid var(--border,#ddd);border-radius:11px;padding:9px;background:transparent;color:inherit;display:grid;gap:3px}.v55-plan-switch button.active{outline:2px solid currentColor}.v55-plan-switch small{font-size:.7rem;opacity:.68}
+.v55-server{border-top:1px solid var(--border,#ddd);padding-top:8px}.v55-server summary{cursor:pointer;font-size:.8rem;opacity:.7}.v55-trust{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;font-size:.78rem}.v55-trust span{display:flex;align-items:center;gap:5px}
+.v55-welcome{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.v55-welcome>div{border:1px solid var(--border,#ddd);border-radius:16px;padding:14px;display:grid;gap:4px}.v55-welcome small{opacity:.68}.v55-welcome strong{font-size:1.3rem}.v55-progress{height:9px;border-radius:999px;background:rgba(127,127,127,.15);overflow:hidden}.v55-progress i{display:block;height:100%;background:currentColor;border-radius:inherit}
+.v55-steps{display:grid;gap:10px}.v55-steps article{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--border,#ddd);border-radius:15px;padding:14px}.v55-steps article.done{opacity:.72}.v55-steps p{margin:4px 0 0;opacity:.68}.v55-steps a{text-decoration:none;font-weight:800}
+.v55-next{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;margin-top:18px;border:1px solid var(--border,#ddd);border-radius:18px;padding:18px}.v55-next>div{display:grid;grid-template-columns:auto 1fr;column-gap:9px}.v55-next>div p{grid-column:2;margin:4px 0 0}
+.v55-sub-status{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.v55-sub-status>div{border:1px solid var(--border,#ddd);border-radius:14px;padding:12px;display:grid;gap:4px}.v55-sub-status small{opacity:.68}.v55-sub-status strong{font-size:1.15rem}
+@media(max-width:900px){.v55-signup-page{grid-template-columns:1fr;padding-top:18px}.v55-signup-copy{display:none}.v55-welcome,.v55-sub-status{grid-template-columns:repeat(2,1fr)}.v55-next{grid-template-columns:1fr}.v55-steps article{grid-template-columns:auto 1fr}.v55-steps article>:last-child{grid-column:2}}
+@media(max-width:560px){.v55-plan-switch{grid-template-columns:1fr}.v55-benefits{grid-template-columns:1fr}.v55-welcome,.v55-sub-status{grid-template-columns:1fr}}
+
+/* CloserFlow 56 · Public Web */
+.v56-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.v56-grid article{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}.v56-grid span{display:block;opacity:.68}.v56-grid strong{display:block;word-break:break-all}@media(max-width:800px){.v56-grid{grid-template-columns:1fr}}

@@ -31,8 +31,8 @@ jobs:
       - name: Lire la version
         run: echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
 
-      - name: Préflight V32
-        run: npm run v32:preflight
+      - name: Préflight V35
+        run: npm run v35:preflight
 
       - name: Installation npm propre
         run: |
@@ -40,7 +40,7 @@ jobs:
           npm ci --no-audit --no-fund --prefer-offline
 
       - name: Build web + Capacitor
-        run: npm run v32:build
+        run: npm run v35:build
 
       - name: Build APK
         working-directory: android
@@ -64,7 +64,7 @@ jobs:
         run: |
           mkdir -p diagnostics
           npm run env:report > diagnostics/environment.json 2>&1 || true
-          npm run v32:preflight > diagnostics/preflight.txt 2>&1 || true
+          npm run v35:preflight > diagnostics/preflight.txt 2>&1 || true
           npm run deps:check > diagnostics/deps-check.txt 2>&1 || true
           npm run doctor > diagnostics/doctor.txt 2>&1 || true
           npm run typecheck > diagnostics/typecheck.txt 2>&1 || true

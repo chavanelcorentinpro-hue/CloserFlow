@@ -1,3 +1,45 @@
+## 56.0.0
+- Public Web Launch : frontend déployable, PWA, variables API/site, workflow web et packaging serveur.
+
+## 55.0.0
+- Self-Service Trial : inscription publique, workspace automatique, essai 14 jours, plan serveur et onboarding.
+
+## 54.0.0
+- Commercial Launch : landing page, tarifs, essai 14 jours, abonnement et suivi conversion.
+
+## 53.0.0
+- Real Project Margin : coût matière + heures + déplacement + sous-traitance + bénéfice réel chantier.
+
+## 52.0.0
+- Invoice Stock Out : facture client → sortie stock + coût matière réel + marge brute.
+
+## 51.0.0
+- Supplier Reconciliation : facture fournisseur → rapprochement BC → réception → stock + historique des coûts.
+
+## 50.0.0
+- Smart Purchase Orders : bons de commande, validation, suivi fournisseur et réception.
+
+## 49.0.0
+- Smart Procurement : besoins, pénuries, urgences, fournisseurs et budget achat.
+
+## 48.0.0
+- Auto Planning : affectation équipe, charge, conflits, indisponibilités et recalcul des retards.
+
+## 47.0.0
+- AI Project Manager : planning chantier, tâches, heures estimées, avancement et alertes stock/temps.
+
+## 47.0.0
+- AI Pricing Engine : prix réalistes, marge et coûts réels.
+
+## 35.0.0
+- Team Workspace & Approvals : équipe multi-utilisateurs, demandes sensibles, validation manager/admin et journal auditable.
+
+## 34.0.0
+- Cloud Sync & Multi-Device : appareils, révisions, conflits, restauration sécurisée et contrôle du workspace.
+
+## 33.0.0
+- Data Health & Beta Polish : intégrité des relations métier, doublons, préparation B2B/facturation, versions UI corrigées et garde-fous de compilation.
+
 ## 32.0.0
 - Beta Channel Hardening : smoke tests, métadonnées et paquet bêta Android standardisé.
 

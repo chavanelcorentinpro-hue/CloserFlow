@@ -12,6 +12,8 @@ const usersFile = resolve(dataDir, 'users.json');
 const devicesFile = resolve(dataDir, 'devices.json');
 const integrationsFile = resolve(dataDir, 'integrations.json');
 const auditFile = resolve(dataDir, 'saas-audit.json');
+const approvalsFile = resolve(dataDir, 'approvals.json');
+const subscriptionsFile = resolve(dataDir, 'subscriptions.json');
 await mkdir(dataDir, { recursive: true });
 
 const json = (res, status, body) => {
@@ -39,6 +41,23 @@ const loadIntegrations = async () => { try { return JSON.parse(await readFile(in
 const saveIntegrations = data => writeFile(integrationsFile, JSON.stringify({ apiKeys: data.apiKeys || [], webhooks: data.webhooks || [], logs: (data.logs || []).slice(0, 1000) }, null, 2), 'utf8');
 const loadAudit = async () => { try { return JSON.parse(await readFile(auditFile, 'utf8')); } catch { return []; } };
 const loadDevices = async () => { try { return JSON.parse(await readFile(devicesFile, 'utf8')); } catch { return []; } };
+const loadApprovals = async () => { try { return JSON.parse(await readFile(approvalsFile, 'utf8')); } catch { return []; } };
+const loadSubscriptions = async () => { try { return JSON.parse(await readFile(subscriptionsFile, 'utf8')); } catch { return []; } };
+const saveSubscriptions = data => writeFile(subscriptionsFile, JSON.stringify(data.slice(0, 10000), null, 2), 'utf8');
+const planLimits = {
+  solo: { users:1, storageMb:512 },
+  team: { users:5, storageMb:2048 },
+  pro: { users:25, storageMb:8192 }
+};
+const normalizePlan = value => ['solo','team','pro'].includes(String(value)) ? String(value) : 'solo';
+const subscriptionPublic = sub => sub ? ({
+  workspaceId:sub.workspaceId, companyName:sub.companyName, plan:sub.plan, status:sub.status,
+  trialStartedAt:sub.trialStartedAt, trialEndsAt:sub.trialEndsAt,
+  createdAt:sub.createdAt, updatedAt:sub.updatedAt,
+  paymentsEnabled:false, limits:planLimits[sub.plan] || planLimits.solo
+}) : null;
+
+const saveApprovals = data => writeFile(approvalsFile, JSON.stringify(data.slice(0, 2000), null, 2), 'utf8');
 const saveDevices = data => writeFile(devicesFile, JSON.stringify(data.slice(0, 500), null, 2), 'utf8');
 const appendAudit = async entry => { const rows = await loadAudit(); rows.unshift({ id: randomBytes(10).toString('hex'), createdAt: new Date().toISOString(), ...entry }); await writeFile(auditFile, JSON.stringify(rows.slice(0, 2000), null, 2), 'utf8'); };
 const dataSize = value => Buffer.byteLength(JSON.stringify(value || {}), 'utf8');
@@ -48,7 +67,7 @@ const publicWebhook = item => ({ id:item.id, url:item.url, events:item.events, a
 const addIntegrationLog = async (entry) => { const data=await loadIntegrations(); data.logs ||= []; data.logs.unshift({ id:randomBytes(10).toString('hex'), createdAt:new Date().toISOString(), ...entry }); await saveIntegrations(data); };
 const findApiKey = async req => { const raw=bearer(req); if(!raw.startsWith('cf_')) return null; const data=await loadIntegrations(); const item=data.apiKeys.find(k=>!k.revokedAt && k.hash===keyHash(raw)); if(!item)return null; item.lastUsedAt=new Date().toISOString(); await saveIntegrations(data); return { item, data }; };
 const canScope = (key, scope) => key.scopes.includes('*') || key.scopes.includes(scope);
-const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'10.1.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
+const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'35.0.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
 const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const publicUser = user => ({ id: user.id, email: user.email, displayName: user.displayName, role: user.role, workspaceId: user.workspaceId, createdAt: user.createdAt });
 const publicInvite = invite => ({ id: invite.id, email: invite.email, role: invite.role, workspaceId: invite.workspaceId, code: invite.code, createdAt: invite.createdAt, expiresAt: invite.expiresAt, acceptedAt: invite.acceptedAt || null });
@@ -82,7 +101,7 @@ const findSession = async req => {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 204, {});
-  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '16.0.0', time: new Date().toISOString() });
+  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '35.0.0', time: new Date().toISOString() });
   if (req.url === '/api/openapi.json' && req.method === 'GET') return json(res, 200, openApiDocument(`http://${req.headers.host || `127.0.0.1:${port}`}`));
 
   try {
@@ -142,9 +161,12 @@ const server = http.createServer(async (req, res) => {
       const displayName = String(input.displayName || '').trim();
       const password = String(input.password || '');
       const workspaceId = String(input.workspaceId || 'default').trim();
+      const companyName = String(input.companyName || displayName).trim().slice(0, 120);
+      const plan = normalizePlan(input.plan);
       if (!email.includes('@') || displayName.length < 2 || password.length < 6 || !safeWorkspace(workspaceId)) return json(res, 400, { error: 'Nom, e-mail, mot de passe (6 caractères) ou espace invalide.' });
       const data = await loadAuth();
       if (data.users.some(user => user.email === email)) return json(res, 409, { error: 'Un compte existe déjà avec cet e-mail.' });
+      if (data.users.some(user => user.workspaceId === workspaceId)) return json(res, 409, { error: 'Cet identifiant entreprise est déjà utilisé.' });
       const user = {
         id: randomBytes(16).toString('hex'), email, displayName,
         passwordHash: hashPassword(password), workspaceId,
@@ -152,8 +174,25 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString(),
       };
       const token = randomBytes(32).toString('hex');
-      data.users.push(user); data.sessions[token] = user.id; await saveAuth(data); await appendAudit({ workspaceId, userId:user.id, actor:displayName, action:'auth.register' });
-      return json(res, 201, { token, user: publicUser(user) });
+      data.users.push(user); data.sessions[token] = user.id; await saveAuth(data);
+
+      const subscriptions = await loadSubscriptions();
+      const now = new Date();
+      const trialEnds = new Date(now.getTime() + 14 * 86400000);
+      const subscription = {
+        workspaceId,
+        companyName: companyName || displayName,
+        plan,
+        status:'trial',
+        trialStartedAt:now.toISOString(),
+        trialEndsAt:trialEnds.toISOString(),
+        createdAt:now.toISOString(),
+        updatedAt:now.toISOString()
+      };
+      subscriptions.unshift(subscription);
+      await saveSubscriptions(subscriptions);
+      await appendAudit({ workspaceId, userId:user.id, actor:displayName, action:'auth.register', detail:`trial ${plan}` });
+      return json(res, 201, { token, user: publicUser(user), subscription: subscriptionPublic(subscription) });
     }
 
     if (req.url === '/api/auth/accept-invite' && req.method === 'POST') {
@@ -200,6 +239,50 @@ const server = http.createServer(async (req, res) => {
     }
 
 
+
+    if (req.url === '/api/billing/status' && req.method === 'GET') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      const rows = await loadSubscriptions();
+      let sub = rows.find(item => item.workspaceId === session.user.workspaceId);
+      if (!sub) {
+        const now = new Date();
+        sub = {
+          workspaceId:session.user.workspaceId,
+          companyName:session.user.displayName,
+          plan:'solo',
+          status:'trial',
+          trialStartedAt:now.toISOString(),
+          trialEndsAt:new Date(now.getTime()+14*86400000).toISOString(),
+          createdAt:now.toISOString(),
+          updatedAt:now.toISOString()
+        };
+        rows.unshift(sub); await saveSubscriptions(rows);
+      }
+      if (sub.status === 'trial' && new Date(sub.trialEndsAt).getTime() < Date.now()) {
+        sub.status = 'trial_expired';
+        sub.updatedAt = new Date().toISOString();
+        await saveSubscriptions(rows);
+      }
+      return json(res, 200, { subscription:subscriptionPublic(sub) });
+    }
+
+    if (req.url === '/api/billing/plan' && req.method === 'PUT') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      if (session.user.role !== 'admin') return json(res, 403, { error: 'Administrateur requis.' });
+      const input = await readBody(req);
+      const plan = normalizePlan(input.plan);
+      const rows = await loadSubscriptions();
+      const sub = rows.find(item => item.workspaceId === session.user.workspaceId);
+      if (!sub) return json(res, 404, { error: 'Abonnement introuvable.' });
+      sub.plan = plan;
+      sub.updatedAt = new Date().toISOString();
+      await saveSubscriptions(rows);
+      await appendAudit({ workspaceId:session.user.workspaceId, userId:session.user.id, actor:session.user.displayName, action:'billing.plan.changed', detail:plan });
+      return json(res, 200, { subscription:subscriptionPublic(sub) });
+    }
+
     if (req.url === '/api/saas/status' && req.method === 'GET') {
       const session = await findSession(req);
       if (!session) return json(res, 401, { error: 'Connexion requise.' });
@@ -208,10 +291,14 @@ const server = http.createServer(async (req, res) => {
       try { workspace = JSON.parse(await readFile(fileFor(session.user.workspaceId), 'utf8')); } catch {}
       const audit = await loadAudit();
       const activeSessions = Object.values(session.data.sessions || {}).filter(id => users.some(user => user.id === id)).length;
+      const subscriptions = await loadSubscriptions();
+      const billing = subscriptions.find(item => item.workspaceId === session.user.workspaceId);
       return json(res, 200, {
         workspaceId: session.user.workspaceId,
-        plan: 'self-hosted',
-        limits: { users: 25, storageMb: 1024 },
+        plan: billing?.plan || 'solo',
+        subscriptionStatus: billing?.status || 'self-hosted',
+        trialEndsAt: billing?.trialEndsAt || null,
+        limits: planLimits[billing?.plan] || { users:25, storageMb:1024 },
         usage: { users: users.length, activeSessions, storageBytes: dataSize(workspace), revision: Number(workspace?.revision || 0) },
         security: { passwordHashing: 'scrypt', bearerSessions: true, tenantIsolation: true, auditLog: true },
         lastAuditAt: audit.find(row => row.workspaceId === session.user.workspaceId)?.createdAt || null,
@@ -233,7 +320,7 @@ const server = http.createServer(async (req, res) => {
       try { activity = JSON.parse(await readFile(activityFileFor(session.user.workspaceId), 'utf8')); } catch {}
       const users = session.data.users.filter(user => user.workspaceId === session.user.workspaceId).map(publicUser);
       await appendAudit({ workspaceId: session.user.workspaceId, userId: session.user.id, actor: session.user.displayName, action: 'backup.exported' });
-      return json(res, 200, { exportedAt: new Date().toISOString(), version: '16.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
+      return json(res, 200, { exportedAt: new Date().toISOString(), version: '35.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
     }
 
     if (req.url === '/api/invitations' && req.method === 'GET') {
@@ -267,6 +354,114 @@ const server = http.createServer(async (req, res) => {
       if (target.role === 'admin' && role !== 'admin' && admins.length <= 1) return json(res, 409, { error: 'Il faut conserver au moins un administrateur.' });
       target.role = role; await saveAuth(session.data); return json(res, 200, { user: publicUser(target) });
     }
+
+    if (req.url === '/api/approvals' && req.method === 'GET') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      const rows = (await loadApprovals())
+        .filter(item => item.workspaceId === session.user.workspaceId)
+        .sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(0, 300);
+      return json(res, 200, { approvals: rows });
+    }
+    if (req.url === '/api/approvals' && req.method === 'POST') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      const input = await readBody(req);
+      const title = String(input.title || '').trim();
+      const detail = String(input.detail || '').trim().slice(0, 3000);
+      const kind = String(input.kind || 'custom');
+      const route = String(input.route || '').trim().slice(0, 200);
+      const amount = Number(input.amount || 0);
+      const allowedKinds = ['expense','discount','payment','data_restore','role_change','purchase','custom'];
+      if (title.length < 3 || !allowedKinds.includes(kind) || !Number.isFinite(amount) || amount < 0) {
+        return json(res, 400, { error: 'Demande d’approbation invalide.' });
+      }
+      const now = new Date().toISOString();
+      const item = {
+        id: randomBytes(12).toString('hex'),
+        workspaceId: session.user.workspaceId,
+        requesterId: session.user.id,
+        requesterName: session.user.displayName,
+        requesterRole: session.user.role,
+        title,
+        detail,
+        kind,
+        route,
+        amount,
+        status: 'pending',
+        createdAt: now,
+        decidedAt: null,
+        decidedById: null,
+        decidedByName: null,
+        decisionNote: ''
+      };
+      const rows = await loadApprovals();
+      rows.unshift(item);
+      await saveApprovals(rows);
+      await appendAudit({
+        workspaceId: session.user.workspaceId,
+        userId: session.user.id,
+        actor: session.user.displayName,
+        action: 'approval.created',
+        detail: `${kind} · ${title}`
+      });
+      return json(res, 201, { approval: item });
+    }
+    const approvalDecisionMatch = req.url?.match(/^\/api\/approvals\/([^/?]+)\/decision$/);
+    if (approvalDecisionMatch && req.method === 'PUT') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      if (!['admin','manager'].includes(session.user.role)) return json(res, 403, { error: 'Validation manager ou administrateur requise.' });
+      const input = await readBody(req);
+      const decision = String(input.decision || '');
+      const note = String(input.note || '').trim().slice(0, 2000);
+      if (!['approved','rejected'].includes(decision)) return json(res, 400, { error: 'Décision invalide.' });
+      const rows = await loadApprovals();
+      const item = rows.find(row => row.id === approvalDecisionMatch[1] && row.workspaceId === session.user.workspaceId);
+      if (!item) return json(res, 404, { error: 'Demande introuvable.' });
+      if (item.status !== 'pending') return json(res, 409, { error: 'Cette demande a déjà été traitée.' });
+      if (item.requesterId === session.user.id && session.user.role !== 'admin') {
+        return json(res, 409, { error: 'Un manager ne peut pas approuver sa propre demande.' });
+      }
+      item.status = decision;
+      item.decisionNote = note;
+      item.decidedAt = new Date().toISOString();
+      item.decidedById = session.user.id;
+      item.decidedByName = session.user.displayName;
+      await saveApprovals(rows);
+      await appendAudit({
+        workspaceId: session.user.workspaceId,
+        userId: session.user.id,
+        actor: session.user.displayName,
+        action: `approval.${decision}`,
+        detail: item.title
+      });
+      return json(res, 200, { approval: item });
+    }
+    const approvalDeleteMatch = req.url?.match(/^\/api\/approvals\/([^/?]+)$/);
+    if (approvalDeleteMatch && req.method === 'DELETE') {
+      const session = await findSession(req);
+      if (!session) return json(res, 401, { error: 'Connexion requise.' });
+      const rows = await loadApprovals();
+      const item = rows.find(row => row.id === approvalDeleteMatch[1] && row.workspaceId === session.user.workspaceId);
+      if (!item) return json(res, 404, { error: 'Demande introuvable.' });
+      if (item.status !== 'pending') return json(res, 409, { error: 'Une demande traitée reste dans le journal.' });
+      if (item.requesterId !== session.user.id && session.user.role !== 'admin') {
+        return json(res, 403, { error: 'Seul le demandeur ou un administrateur peut annuler cette demande.' });
+      }
+      const next = rows.filter(row => row.id !== item.id);
+      await saveApprovals(next);
+      await appendAudit({
+        workspaceId: session.user.workspaceId,
+        userId: session.user.id,
+        actor: session.user.displayName,
+        action: 'approval.cancelled',
+        detail: item.title
+      });
+      return json(res, 200, { ok: true });
+    }
+
     if (req.url === '/api/integrations/keys' && req.method === 'GET') {
       const session = await findSession(req); if (!session) return json(res, 401, { error: 'Connexion requise.' });
       const data = await loadIntegrations(); return json(res, 200, { keys: data.apiKeys.filter(k => k.workspaceId === session.user.workspaceId).map(publicKey) });
