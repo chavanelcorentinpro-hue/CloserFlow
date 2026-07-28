@@ -17,12 +17,8 @@ const subscriptionsFile = resolve(dataDir, 'subscriptions.json');
 await mkdir(dataDir, { recursive: true });
 
 const json = (res, status, body) => {
-  res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  });
+  res.statusCode = status;
+  res.setHeader('Content-Type','application/json; charset=utf-8');
   res.end(JSON.stringify(body));
 };
 
@@ -50,6 +46,7 @@ const planLimits = {
   pro: { users:25, storageMb:8192 }
 };
 const normalizePlan = value => ['solo','team','pro'].includes(String(value)) ? String(value) : 'solo';
+const getWorkspaceSubscription = async workspaceId => (await loadSubscriptions()).find(item=>item.workspaceId===workspaceId) || null;
 const subscriptionPublic = sub => sub ? ({
   workspaceId:sub.workspaceId, companyName:sub.companyName, plan:sub.plan, status:sub.status,
   trialStartedAt:sub.trialStartedAt, trialEndsAt:sub.trialEndsAt,
@@ -67,7 +64,7 @@ const publicWebhook = item => ({ id:item.id, url:item.url, events:item.events, a
 const addIntegrationLog = async (entry) => { const data=await loadIntegrations(); data.logs ||= []; data.logs.unshift({ id:randomBytes(10).toString('hex'), createdAt:new Date().toISOString(), ...entry }); await saveIntegrations(data); };
 const findApiKey = async req => { const raw=bearer(req); if(!raw.startsWith('cf_')) return null; const data=await loadIntegrations(); const item=data.apiKeys.find(k=>!k.revokedAt && k.hash===keyHash(raw)); if(!item)return null; item.lastUsedAt=new Date().toISOString(); await saveIntegrations(data); return { item, data }; };
 const canScope = (key, scope) => key.scopes.includes('*') || key.scopes.includes(scope);
-const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'35.0.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
+const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'59.0.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
 const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const publicUser = user => ({ id: user.id, email: user.email, displayName: user.displayName, role: user.role, workspaceId: user.workspaceId, createdAt: user.createdAt });
 const publicInvite = invite => ({ id: invite.id, email: invite.email, role: invite.role, workspaceId: invite.workspaceId, code: invite.code, createdAt: invite.createdAt, expiresAt: invite.expiresAt, acceptedAt: invite.acceptedAt || null });
@@ -99,9 +96,90 @@ const findSession = async req => {
   return user ? { token, user, data } : null;
 };
 
+
+const CAPABILITY_TTL_MS_V59 = 5 * 60_000;
+const capabilityTokensV59 = new Map();
+function issueCapabilityV59({userId,workspaceId,capability}) {
+  const token = createHash('sha256').update(crypto.randomUUID()+crypto.randomUUID()).digest('hex');
+  const expiresAt = Date.now()+CAPABILITY_TTL_MS_V59;
+  capabilityTokensV59.set(token,{userId,workspaceId,capability,expiresAt});
+  return {token,expiresAt};
+}
+function consumeCapabilityV59(token,expected) {
+  const row=capabilityTokensV59.get(String(token||''));
+  if(!row)return {ok:false,error:'Jeton de capacité invalide.'};
+  if(row.expiresAt<Date.now()){capabilityTokensV59.delete(String(token||''));return {ok:false,error:'Jeton de capacité expiré.'};}
+  if(row.userId!==expected.userId||row.workspaceId!==expected.workspaceId||row.capability!==expected.capability)return {ok:false,error:'Jeton de capacité non autorisé.'};
+  return {ok:true,row};
+}
+function allowedCapabilityForPlanV59(plan,capability){
+ const rules={ai:['solo','team','pro'],pricing:['solo','team','pro'],cloud:['team','pro'],team:['team','pro'],advancedMargin:['pro']};
+ return (rules[capability]||[]).includes(plan);
+}
+const SECURITY_HEADERS_V57 = {
+  'X-Content-Type-Options':'nosniff',
+  'X-Frame-Options':'DENY',
+  'Referrer-Policy':'strict-origin-when-cross-origin',
+  'Permissions-Policy':'camera=(), microphone=(), geolocation=()',
+  'Cross-Origin-Opener-Policy':'same-origin',
+  'Cross-Origin-Resource-Policy':'same-site'
+};
+
+const RATE_WINDOW_MS=60_000;
+const RATE_LIMIT=120;
+const rateBuckets=new Map();
+
+function checkRateLimit(req){
+  const ip=String(req.headers['cf-connecting-ip']||req.headers['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim();
+  const now=Date.now();
+  const bucket=rateBuckets.get(ip)||{start:now,count:0};
+  if(now-bucket.start>RATE_WINDOW_MS){bucket.start=now;bucket.count=0}
+  bucket.count+=1;
+  rateBuckets.set(ip,bucket);
+  return {ok:bucket.count<=RATE_LIMIT,retryAfter:Math.ceil(Math.max(0,RATE_WINDOW_MS-(now-bucket.start))/1000)};
+}
+
+const allowedOrigins=new Set(
+  String(process.env.CORS_ORIGINS||process.env.PUBLIC_SITE_URL||'')
+    .split(',').map(x=>x.trim()).filter(Boolean)
+);
+
+function applySecurityHeaders(req,res){
+  Object.entries(SECURITY_HEADERS_V57).forEach(([k,v])=>res.setHeader(k,v));
+  res.setHeader('Cache-Control','no-store');
+
+  const origin=String(req.headers.origin||'');
+  if(origin&&allowedOrigins.has(origin)){
+    res.setHeader('Access-Control-Allow-Origin',origin);
+    res.setHeader('Vary','Origin');
+    res.setHeader('Access-Control-Allow-Credentials','true');
+  }
+  res.setHeader('Access-Control-Allow-Headers','Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods','GET, POST, PUT, PATCH, DELETE, OPTIONS');
+}
+
+function requireActiveSubscription(sub){
+  if(!sub)return {ok:false,error:'Abonnement introuvable.'};
+  if(sub.status==='active')return {ok:true};
+  if(sub.status==='trial'){
+    const end=new Date(sub.trialEndsAt||0).getTime();
+    if(end>Date.now())return {ok:true};
+    return {ok:false,error:'Essai expiré.'};
+  }
+  return {ok:false,error:'Abonnement inactif.'};
+}
+
 const server = http.createServer(async (req, res) => {
+applySecurityHeaders(req,res);
+if(req.method==='OPTIONS'){res.statusCode=204;res.end();return}
+const rate=checkRateLimit(req);
+if(!rate.ok){
+  res.setHeader('Retry-After',String(rate.retryAfter));
+  return json(res,429,{error:'Trop de requêtes. Réessayez plus tard.'});
+}
+
   if (req.method === 'OPTIONS') return json(res, 204, {});
-  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '35.0.0', time: new Date().toISOString() });
+  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '59.0.0', time: new Date().toISOString() });
   if (req.url === '/api/openapi.json' && req.method === 'GET') return json(res, 200, openApiDocument(`http://${req.headers.host || `127.0.0.1:${port}`}`));
 
   try {
@@ -240,6 +318,57 @@ const server = http.createServer(async (req, res) => {
 
 
 
+
+    if (req.url === '/api/license/status' && req.method === 'GET') {
+      const session=await findSession(req);
+      if(!session)return json(res,401,{error:'Connexion requise.'});
+      const sub=await getWorkspaceSubscription(session.user.workspaceId);
+      const gate=requireActiveSubscription(sub);
+      return json(res,200,{valid:gate.ok,reason:gate.ok?null:gate.error,workspaceId:session.user.workspaceId,plan:sub?.plan||'solo',build:'59.0.0',fingerprint:'e90ac4b5e2b4fb4cdeaeedfb9a916037af2c8cd83aa88468ee6a38eab2c8f528'});
+    }
+
+    if (req.url === '/api/capabilities/issue' && req.method === 'POST') {
+      const session=await findSession(req); if(!session)return json(res,401,{error:'Connexion requise.'});
+      const sub=await getWorkspaceSubscription(session.user.workspaceId); const gate=requireActiveSubscription(sub); if(!gate.ok)return json(res,403,{error:gate.error});
+      const input=await readBody(req); const capability=String(input.capability||''); const plan=sub?.plan||'solo';
+      if(!allowedCapabilityForPlanV59(plan,capability))return json(res,403,{error:'Fonction non incluse dans ce plan.'});
+      const issued=issueCapabilityV59({userId:session.user.id,workspaceId:session.user.workspaceId,capability});
+      return json(res,200,{capability,token:issued.token,expiresAt:new Date(issued.expiresAt).toISOString()});
+    }
+
+    if (req.url === '/api/protected/pricing/check' && req.method === 'POST') {
+      const session=await findSession(req); if(!session)return json(res,401,{error:'Connexion requise.'}); const input=await readBody(req);
+      const auth=consumeCapabilityV59(req.headers['x-closerflow-capability'],{userId:session.user.id,workspaceId:session.user.workspaceId,capability:'pricing'}); if(!auth.ok)return json(res,403,{error:auth.error});
+      const material=Math.max(0,Number(input.materialCost||0)), laborHours=Math.max(0,Number(input.laborHours||0)), hourlyCost=Math.max(0,Number(input.hourlyCost||0)), overhead=Math.max(0,Number(input.overhead||0)), targetMargin=Math.min(80,Math.max(0,Number(input.targetMargin||30)));
+      const baseCost=material+laborHours*hourlyCost+overhead; const suggestedHt=baseCost/Math.max(.01,1-targetMargin/100);
+      return json(res,200,{baseCost:Number(baseCost.toFixed(2)),suggestedHt:Number(suggestedHt.toFixed(2)),targetMargin,serverCalculated:true});
+    }
+
+    if (req.url === '/api/protected/margin/check' && req.method === 'POST') {
+      const session=await findSession(req); if(!session)return json(res,401,{error:'Connexion requise.'}); const input=await readBody(req);
+      const auth=consumeCapabilityV59(req.headers['x-closerflow-capability'],{userId:session.user.id,workspaceId:session.user.workspaceId,capability:'advancedMargin'}); if(!auth.ok)return json(res,403,{error:auth.error});
+      const revenue=Math.max(0,Number(input.revenue||0)), costs=Math.max(0,Number(input.costs||0)), profit=revenue-costs, margin=revenue>0?profit/revenue*100:0;
+      return json(res,200,{revenue,costs,profit:Number(profit.toFixed(2)),margin:Number(margin.toFixed(2)),serverCalculated:true});
+    }
+
+    if (req.url === '/api/entitlements' && req.method === 'GET') {
+      const session = await findSession(req);
+      if (!session) return json(res,401,{error:'Connexion requise.'});
+      const sub = await getWorkspaceSubscription(session.user.workspaceId);
+      const gate = requireActiveSubscription(sub);
+      const plan = sub?.plan || 'solo';
+      return json(res,200,{
+        active:gate.ok, reason:gate.ok?null:gate.error, plan,
+        entitlements:{
+          ai:gate.ok,
+          pricing:gate.ok,
+          cloud:gate.ok && plan!=='solo',
+          team:gate.ok && plan!=='solo',
+          advancedMargin:gate.ok && plan==='pro'
+        }
+      });
+    }
+
     if (req.url === '/api/billing/status' && req.method === 'GET') {
       const session = await findSession(req);
       if (!session) return json(res, 401, { error: 'Connexion requise.' });
@@ -320,7 +449,7 @@ const server = http.createServer(async (req, res) => {
       try { activity = JSON.parse(await readFile(activityFileFor(session.user.workspaceId), 'utf8')); } catch {}
       const users = session.data.users.filter(user => user.workspaceId === session.user.workspaceId).map(publicUser);
       await appendAudit({ workspaceId: session.user.workspaceId, userId: session.user.id, actor: session.user.displayName, action: 'backup.exported' });
-      return json(res, 200, { exportedAt: new Date().toISOString(), version: '35.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
+      return json(res, 200, { exportedAt: new Date().toISOString(), version: '59.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
     }
 
     if (req.url === '/api/invitations' && req.method === 'GET') {

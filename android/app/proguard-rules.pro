@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# CloserFlow V58
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keep class com.getcapacitor.** { *; }
+-dontwarn com.getcapacitor.**
+-keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}
+-keepclasseswithmembernames class * { native <methods>; }

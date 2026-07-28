@@ -1,3 +1,6 @@
+## 57.0.0
+- Hardening : scan secrets, headers sécurité, rate limit, CORS, entitlements serveur et licence propriétaire.
+
 ## 56.0.0
 - Public Web Launch : frontend déployable, PWA, variables API/site, workflow web et packaging serveur.
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
 export function MorePage(){const {resetDemo}=useAppData();return <><div className="page-title"><div><p className="eyebrow">OUTILS</p><h1>Plus</h1></div></div><div className="more-grid">
  <Link className="menu-card v35-menu" to="/team-workspace-v35"><UsersRound/><div><strong>CloserFlow 35 · Team Workspace</strong><small>Équipe, invitations, validations et journal des décisions</small></div></Link>
+ <Link className="menu-card v57-menu" to="/security-v57"><ShieldCheck/><div><strong>CloserFlow 57 · Protection</strong><small>Licence, secrets, API et droits serveur</small></div></Link>
  <Link className="menu-card v56-menu" to="/deployment-v56"><Globe2/><div><strong>CloserFlow 56 · Mise en ligne</strong><small>URL publique, API et PWA</small></div></Link>
  <Link className="menu-card v54-menu" to="/subscription-v54"><CreditCard/><div><strong>CloserFlow 54 · Abonnement</strong><small>Essai, formules et préparation paiement</small></div></Link>
  <Link className="menu-card v54-menu" to="/commercial-v54"><BarChart3/><div><strong>CloserFlow 54 · Conversion</strong><small>Visites, clics et premiers indicateurs commerciaux</small></div></Link>

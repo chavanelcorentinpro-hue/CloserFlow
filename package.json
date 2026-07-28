@@ -1,7 +1,7 @@
 {
   "name": "closerflow",
   "private": true,
-  "version": "56.0.0",
+  "version": "59.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -83,7 +83,16 @@
     "v56:preflight": "npm run version:sync && npm run audit && npm run release:check && npm run lock:check && npm run android:release-check && npm run smoke:static",
     "v56:build": "npm run deps:check && npm run doctor && npm run typecheck && npm run build && npx cap sync android",
     "v56:web": "npm run typecheck && npm run build",
-    "v56:apk": "npm run v56:build && cd android && ./gradlew assembleDebug --no-daemon --stacktrace"
+    "v56:apk": "npm run v56:build && cd android && ./gradlew assembleDebug --no-daemon --stacktrace",
+    "v57:preflight": "npm run version:sync && npm run audit && npm run release:check && npm run lock:check && npm run android:release-check && npm run smoke:static",
+    "v57:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v57:build": "npm run deps:check && npm run doctor && npm run typecheck && npm run security:scan && npm run build && npx cap sync android",
+    "v57:apk": "npm run v57:build && cd android && ./gradlew assembleDebug --no-daemon --stacktrace",
+    "security:scan": "node scripts/security-scan-v57.mjs",
+    "v58:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v58:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace",
+    "v59:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v59:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

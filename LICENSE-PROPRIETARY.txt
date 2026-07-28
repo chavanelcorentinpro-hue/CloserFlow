@@ -1,0 +1,11 @@
+CloserFlow — Licence propriétaire
+
+Copyright © 2026 CloserFlow. Tous droits réservés.
+
+Le code source, le code compilé, les interfaces, la documentation, les logiques métier,
+les workflows, les modèles, les algorithmes et les éléments de marque de CloserFlow
+ne peuvent pas être copiés, redistribués, revendus, modifiés, décompilés ou utilisés
+pour créer un produit concurrent sans autorisation écrite du titulaire des droits.
+
+Cette licence n'accorde aucun droit de propriété intellectuelle à l'utilisateur final.
+L'accès au service est soumis aux conditions commerciales et au statut d'abonnement.
