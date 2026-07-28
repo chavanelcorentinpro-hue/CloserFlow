@@ -102,7 +102,7 @@ export function ProjectMarginV53Page(){
     </section>
 
     <section className="v53-list">
-      {rows.map(row=><article key={row.projectId} className={row.status}>
+      {rows.map((row: any) =><article key={row.projectId} className={row.status}>
         <div className="v53-title">
           <div><strong>{row.projectTitle}</strong><small>{row.laborHours.toFixed(1)} h · {euro.format(row.revenuePerHour)}/h de CA</small></div>
           <b>{row.marginPercent.toFixed(1)} %</b>
@@ -122,7 +122,7 @@ export function ProjectMarginV53Page(){
           <span>Bénéfice brut <strong>{euro.format(row.grossProfit)}</strong></span>
         </div>
 
-        {row.warnings.length>0&&<div className="v53-warnings">{row.warnings.map(w=><p key={w}><AlertTriangle/>{w}</p>)}</div>}
+        {row.warnings.length>0&&<div className="v53-warnings">{row.warnings.map((w: any) =><p key={w}><AlertTriangle/>{w}</p>)}</div>}
       </article>)}
     </section>
 
