@@ -1,3 +1,15 @@
+## 64.0.0
+- Persistent database layer, legacy migration and backup/restore infrastructure.
+
+## 63.0.0
+- Tenant Isolation : confinement des workspaces, écritures atomiques et test anti-fuite inter-entreprises.
+
+## 61.0.0
+- Commercial Release : readiness de production, offres commerciales, statut serveur et checklist avant encaissement réel.
+
+## 60.0.0
+- Édition des devis, modification des factures brouillon, historique de versions et copies de correction liées.
+
 ## 57.0.0
 - Hardening : scan secrets, headers sécurité, rate limit, CORS, entitlements serveur et licence propriétaire.
 

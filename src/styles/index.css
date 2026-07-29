@@ -341,3 +341,22 @@
 .v58-security-grid span{display:block;opacity:.7}@media(max-width:800px){.v58-security-grid{grid-template-columns:1fr}}
 
 .v59-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.v59-grid article{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}.v59-grid span{display:block;opacity:.7}@media(max-width:800px){.v59-grid{grid-template-columns:1fr}}
+
+/* CloserFlow 60 · Document editing & history */
+.revision-panel{margin:14px 0;padding:16px;border:1px solid var(--border,#ddd);border-radius:18px}
+.document-correction-note{display:grid;gap:3px;margin:12px 0;padding:12px 14px;border:1px solid var(--border,#ddd);border-radius:12px}
+.document-correction-note span,.document-correction-note small{opacity:.72}
+@media(max-width:700px){.document-toolbar{align-items:flex-start;gap:8px}.document-toolbar>.row-actions{flex-wrap:wrap}}
+
+/* CloserFlow 61 · Commercial Release */
+.v61-readiness,.v61-plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.v61-readiness article,.v61-plans article{display:grid;gap:7px;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}
+.v61-readiness article{grid-template-columns:auto 1fr;align-items:center}.v61-readiness span,.v61-plans span{opacity:.72}
+.v61-plans b{font-size:1.15rem}@media(max-width:800px){.v61-readiness,.v61-plans{grid-template-columns:1fr}}
+
+.v63-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}.v63-grid article{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}.v63-grid span{display:block;opacity:.72}@media(max-width:800px){.v63-grid{grid-template-columns:1fr}}
+
+/* CloserFlow 64 · Persistent DB */
+.v64-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.v64-grid article{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:1px solid var(--border,#ddd);border-radius:16px;padding:14px}
+.v64-grid span{display:block;opacity:.72}@media(max-width:900px){.v64-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.v64-grid{grid-template-columns:1fr}}

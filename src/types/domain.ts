@@ -28,15 +28,22 @@ export interface Mission {
   photos?: MissionPhoto[]; signature?: MissionSignature | null; closeout?: MissionCloseout | null;
 }
 export interface DocumentLine { id:string; description:string; quantity:number; unit:string; unit_price_ht:number; }
+export interface DocumentRevision {
+  id:string; revision:number; saved_at:string; reason:string;
+  client_id:string|null; title:string; vat_rate:number; discount_percent:number; lines:DocumentLine[];
+}
 export interface Quote {
   id:string; number:string; client_id:string|null; mission_id:string|null; title:string;
   status:QuoteStatus; vat_rate:number; discount_percent:number; lines:DocumentLine[]; created_at:string;
+  updated_at?:string|null; revision?:number; revisions?:DocumentRevision[];
 }
 export interface InvoicePayment { id:string; amount:number; method:'card'|'transfer'|'cash'|'check'|'other'; note:string; paid_at:string; }
 export interface Invoice {
   id:string; number:string; client_id:string|null; mission_id:string|null; quote_id:string|null; title:string;
   status:InvoiceStatus; vat_rate:number; discount_percent:number; lines:DocumentLine[];
   due_date:string|null; created_at:string; paid_at:string|null; payments:InvoicePayment[];
+  updated_at?:string|null; revision?:number; revisions?:DocumentRevision[];
+  corrected_invoice_id?:string|null; correction_reason?:string|null;
 }
 export interface InventoryMovement { id:string; quantity:number; type:'in'|'out'|'adjustment'; note:string; created_at:string; }
 export interface InventoryItem { id:string; name:string; sku:string; unit:string; quantity:number; minimum_quantity:number; location:string; movements:InventoryMovement[]; created_at:string; }

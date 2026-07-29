@@ -3,6 +3,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { atomicWriteJsonV63, readJsonV63, workspaceFileV63, assertWorkspaceOwnershipV63 } from './storage-v63.mjs';
+import { createDbV64 } from './db-v64.mjs';
+import { migrateLegacyWorkspaceJsonV64 } from './migrate-v64.mjs';
+import { loadProductionConfigV65, validateProductionConfigV65 } from './production-config-v65.mjs';
+import { createDatabaseV66 } from './db-factory-v66.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = resolve(process.env.CLOSERFLOW_DATA_DIR || resolve(root, 'data'));
@@ -30,16 +35,16 @@ const readBody = req => new Promise((resolveBody, reject) => {
 });
 
 const safeWorkspace = value => /^[a-zA-Z0-9_-]{1,80}$/.test(value);
-const fileFor = workspace => resolve(dataDir, `workspace-${workspace}.json`);
-const historyFileFor = workspace => resolve(dataDir, `workspace-${workspace}-history.json`);
-const activityFileFor = workspace => resolve(dataDir, `workspace-${workspace}-activity.json`);
+const fileFor = workspace => workspaceFileV63(dataDir, workspace);
+const historyFileFor = workspace => workspaceFileV63(dataDir, workspace, '-history');
+const activityFileFor = workspace => workspaceFileV63(dataDir, workspace, '-activity');
 const loadIntegrations = async () => { try { return JSON.parse(await readFile(integrationsFile, 'utf8')); } catch { return { apiKeys: [], webhooks: [], logs: [] }; } };
 const saveIntegrations = data => writeFile(integrationsFile, JSON.stringify({ apiKeys: data.apiKeys || [], webhooks: data.webhooks || [], logs: (data.logs || []).slice(0, 1000) }, null, 2), 'utf8');
 const loadAudit = async () => { try { return JSON.parse(await readFile(auditFile, 'utf8')); } catch { return []; } };
 const loadDevices = async () => { try { return JSON.parse(await readFile(devicesFile, 'utf8')); } catch { return []; } };
 const loadApprovals = async () => { try { return JSON.parse(await readFile(approvalsFile, 'utf8')); } catch { return []; } };
 const loadSubscriptions = async () => { try { return JSON.parse(await readFile(subscriptionsFile, 'utf8')); } catch { return []; } };
-const saveSubscriptions = data => writeFile(subscriptionsFile, JSON.stringify(data.slice(0, 10000), null, 2), 'utf8');
+const saveSubscriptions = data => atomicWriteJsonV63(subscriptionsFile, data.slice(0,10000));
 const planLimits = {
   solo: { users:1, storageMb:512 },
   team: { users:5, storageMb:2048 },
@@ -54,9 +59,9 @@ const subscriptionPublic = sub => sub ? ({
   paymentsEnabled:false, limits:planLimits[sub.plan] || planLimits.solo
 }) : null;
 
-const saveApprovals = data => writeFile(approvalsFile, JSON.stringify(data.slice(0, 2000), null, 2), 'utf8');
-const saveDevices = data => writeFile(devicesFile, JSON.stringify(data.slice(0, 500), null, 2), 'utf8');
-const appendAudit = async entry => { const rows = await loadAudit(); rows.unshift({ id: randomBytes(10).toString('hex'), createdAt: new Date().toISOString(), ...entry }); await writeFile(auditFile, JSON.stringify(rows.slice(0, 2000), null, 2), 'utf8'); };
+const saveApprovals = data => atomicWriteJsonV63(approvalsFile, data.slice(0,2000));
+const saveDevices = data => atomicWriteJsonV63(devicesFile, data.slice(0,500));
+const appendAudit = async entry => { const rows = await loadAudit(); rows.unshift({ id: randomBytes(10).toString('hex'), createdAt: new Date().toISOString(), ...entry }); await atomicWriteJsonV63(auditFile, rows.slice(0,2000)); };
 const dataSize = value => Buffer.byteLength(JSON.stringify(value || {}), 'utf8');
 const keyHash = value => createHash('sha256').update(String(value)).digest('hex');
 const publicKey = item => ({ id:item.id, name:item.name, prefix:item.prefix, scopes:item.scopes, workspaceId:item.workspaceId, createdAt:item.createdAt, lastUsedAt:item.lastUsedAt || null, revokedAt:item.revokedAt || null });
@@ -64,7 +69,7 @@ const publicWebhook = item => ({ id:item.id, url:item.url, events:item.events, a
 const addIntegrationLog = async (entry) => { const data=await loadIntegrations(); data.logs ||= []; data.logs.unshift({ id:randomBytes(10).toString('hex'), createdAt:new Date().toISOString(), ...entry }); await saveIntegrations(data); };
 const findApiKey = async req => { const raw=bearer(req); if(!raw.startsWith('cf_')) return null; const data=await loadIntegrations(); const item=data.apiKeys.find(k=>!k.revokedAt && k.hash===keyHash(raw)); if(!item)return null; item.lastUsedAt=new Date().toISOString(); await saveIntegrations(data); return { item, data }; };
 const canScope = (key, scope) => key.scopes.includes('*') || key.scopes.includes(scope);
-const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'59.0.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
+const openApiDocument = baseUrl => ({ openapi:'3.0.3', info:{title:'CloserFlow Public API',version:'66.0.0'}, servers:[{url:baseUrl}], components:{securitySchemes:{bearerAuth:{type:'http',scheme:'bearer'}}}, security:[{bearerAuth:[]}], paths:{'/public/v1/workspace':{get:{summary:'Lire le dossier synchronisé',responses:{'200':{description:'Données du workspace'}}}},'/public/v1/clients':{get:{summary:'Lister les clients',responses:{'200':{description:'Clients'}}}},'/public/v1/missions':{get:{summary:'Lister les missions',responses:{'200':{description:'Missions'}}}}} });
 const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const publicUser = user => ({ id: user.id, email: user.email, displayName: user.displayName, role: user.role, workspaceId: user.workspaceId, createdAt: user.createdAt });
 const publicInvite = invite => ({ id: invite.id, email: invite.email, role: invite.role, workspaceId: invite.workspaceId, code: invite.code, createdAt: invite.createdAt, expiresAt: invite.expiresAt, acceptedAt: invite.acceptedAt || null });
@@ -96,6 +101,28 @@ const findSession = async req => {
   return user ? { token, user, data } : null;
 };
 
+
+const prodConfigV65 = loadProductionConfigV65(process.env);
+const prodConfigCheckV65 = validateProductionConfigV65(prodConfigV65);
+if(prodConfigV65.production && !prodConfigCheckV65.ok){
+  console.error('CloserFlow production configuration invalid:', prodConfigCheckV65.errors.join(' '));
+  process.exit(1);
+}
+
+const {db:databaseV64,driver:databaseDriverV66}=await createDatabaseV66(process.env);
+const migrationV64 = await migrateLegacyWorkspaceJsonV64(process.env.CLOSERFLOW_DATA_DIR || dataDir).catch(()=>({migrated:0}));
+
+const productionConfigV62={
+ dataDir:process.env.CLOSERFLOW_DATA_DIR||'',
+ allowedOrigins:String(process.env.CLOSERFLOW_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean)
+};
+function productionReadinessServerV62(){
+ const checks={
+  persistentDataDir:Boolean(productionConfigV62.dataDir),
+  restrictedOrigins:productionConfigV62.allowedOrigins.length>0&&!productionConfigV62.allowedOrigins.includes('*')
+ };
+ return {checks,ready:Object.values(checks).every(Boolean)};
+}
 
 const CAPABILITY_TTL_MS_V59 = 5 * 60_000;
 const capabilityTokensV59 = new Map();
@@ -179,7 +206,7 @@ if(!rate.ok){
 }
 
   if (req.method === 'OPTIONS') return json(res, 204, {});
-  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '59.0.0', time: new Date().toISOString() });
+  if (req.url === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'CloserFlow API', version: '66.0.0', time: new Date().toISOString() });
   if (req.url === '/api/openapi.json' && req.method === 'GET') return json(res, 200, openApiDocument(`http://${req.headers.host || `127.0.0.1:${port}`}`));
 
   try {
@@ -319,12 +346,105 @@ if(!rate.ok){
 
 
 
+if (req.url === '/api/commercial/status' && req.method === 'GET') {
+  const session = await findSession(req);
+  if (!session) return json(res,401,{error:'Connexion requise.'});
+  const sub = await getWorkspaceSubscription(session.user.workspaceId);
+  const gate = requireActiveSubscription(sub);
+  return json(res,200,{
+    version:'66.0.0',
+    workspaceId:session.user.workspaceId,
+    authenticated:true,
+    subscriptionActive:gate.ok,
+    plan:sub?.plan||'starter',
+    sellableAccess:gate.ok
+  });
+}
+
+if(req.url==='/api/health/live'&&req.method==='GET'){
+  return json(res,200,{service:'closerflow-api',version:'66.0.0',live:true});
+}
+
+if(req.url==='/api/health/ready'&&req.method==='GET'){
+  try{
+    await databaseV64.read();
+    return json(res,200,{service:'closerflow-api',version:'66.0.0',ready:true,productionConfig:prodConfigCheckV65.ok,databaseDriver:databaseDriverV66});
+  }catch{
+    return json(res,503,{service:'closerflow-api',version:'66.0.0',ready:false});
+  }
+}
+
+if(req.url==='/api/db/health'&&req.method==='GET'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  const workspaces=await databaseV64.listWorkspaces();
+  return json(res,200,{
+    version:'66.0.0',backend:databaseDriverV66,initialized:true,
+    currentWorkspace:session.user.workspaceId,
+    workspaceCount:workspaces.length,
+    legacyMigrated:migrationV64.migrated
+  });
+}
+
+if(req.url==='/api/db/workspace'&&req.method==='GET'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  return json(res,200,{workspace:await databaseV64.getWorkspace(session.user.workspaceId)});
+}
+
+if(req.url==='/api/db/workspace'&&req.method==='PUT'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  const input=await readBody(req);
+  if(['workspaceId','id','ownerWorkspaceId'].some(key=>key in input))return json(res,400,{error:'Payload workspace invalide.'});
+  return json(res,200,{workspace:await databaseV64.upsertWorkspace(session.user.workspaceId,input)});
+}
+
+if(req.url==='/api/backups'&&req.method==='POST'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  if(session.user.role!=='admin')return json(res,403,{error:'Administrateur requis.'});
+  const backup=await databaseV64.backup(`workspace-${session.user.workspaceId}`);
+  return json(res,201,{backup:backup.split('/').pop()});
+}
+
+if(req.url==='/api/backups'&&req.method==='GET'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  if(session.user.role!=='admin')return json(res,403,{error:'Administrateur requis.'});
+  return json(res,200,{backups:await databaseV64.listBackups()});
+}
+
+if(req.url==='/api/security/tenant-status'&&req.method==='GET'){
+  const session=await findSession(req);
+  if(!session)return json(res,401,{error:'Connexion requise.'});
+  try{
+    assertWorkspaceOwnershipV63(session.user.workspaceId,session.user.workspaceId);
+    const storage=fileFor(session.user.workspaceId);
+    return json(res,200,{
+      version:'66.0.0',
+      isolated:true,
+      workspaceId:session.user.workspaceId,
+      storageConfined:true,
+      atomicWrites:true,
+      storageFile:storage.split('/').pop()
+    });
+  }catch(error){
+    return json(res,500,{isolated:false,error:error instanceof Error?error.message:'Erreur isolation'});
+  }
+}
+
+    if(req.url==='/api/health/production'&&req.method==='GET'){
+      const status=productionReadinessServerV62();
+      return json(res,status.ready?200:503,{service:'closerflow-api',version:'66.0.0',ready:status.ready,checks:status.checks});
+    }
+
     if (req.url === '/api/license/status' && req.method === 'GET') {
       const session=await findSession(req);
       if(!session)return json(res,401,{error:'Connexion requise.'});
       const sub=await getWorkspaceSubscription(session.user.workspaceId);
       const gate=requireActiveSubscription(sub);
-      return json(res,200,{valid:gate.ok,reason:gate.ok?null:gate.error,workspaceId:session.user.workspaceId,plan:sub?.plan||'solo',build:'59.0.0',fingerprint:'e90ac4b5e2b4fb4cdeaeedfb9a916037af2c8cd83aa88468ee6a38eab2c8f528'});
+      return json(res,200,{valid:gate.ok,reason:gate.ok?null:gate.error,workspaceId:session.user.workspaceId,plan:sub?.plan||'solo',build:'66.0.0',fingerprint:'e90ac4b5e2b4fb4cdeaeedfb9a916037af2c8cd83aa88468ee6a38eab2c8f528'});
     }
 
     if (req.url === '/api/capabilities/issue' && req.method === 'POST') {
@@ -449,7 +569,7 @@ if(!rate.ok){
       try { activity = JSON.parse(await readFile(activityFileFor(session.user.workspaceId), 'utf8')); } catch {}
       const users = session.data.users.filter(user => user.workspaceId === session.user.workspaceId).map(publicUser);
       await appendAudit({ workspaceId: session.user.workspaceId, userId: session.user.id, actor: session.user.displayName, action: 'backup.exported' });
-      return json(res, 200, { exportedAt: new Date().toISOString(), version: '59.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
+      return json(res, 200, { exportedAt: new Date().toISOString(), version: '66.0.0', workspaceId: session.user.workspaceId, workspace, history, activity, users });
     }
 
     if (req.url === '/api/invitations' && req.method === 'GET') {
@@ -699,7 +819,7 @@ if(!rate.ok){
       try { history = JSON.parse(await readFile(historyFileFor(workspace), 'utf8')); } catch {}
       if (previous) history.unshift({ revision: previous.revision, updatedAt: previous.updatedAt, deviceId: previous.deviceId, payload: previous.payload });
       history = history.slice(0, 20);
-      await writeFile(historyFileFor(workspace), JSON.stringify(history, null, 2), 'utf8');
+      await atomicWriteJsonV63(historyFileFor(workspace), history);
       await writeFile(path, JSON.stringify(next, null, 2), 'utf8');
       if (session) await appendAudit({ workspaceId:workspace, userId:session.user.id, actor:session.user.displayName, action:'workspace.synced', detail:`revision ${next.revision}` });
       return json(res, 200, next);
@@ -712,3 +832,17 @@ if(!rate.ok){
   }
 });
 server.listen(port, '0.0.0.0', () => console.log(`CloserFlow API: http://localhost:${port}`));
+
+let shuttingDownV65=false;
+const shutdownV65=signal=>{
+  if(shuttingDownV65)return;
+  shuttingDownV65=true;
+  console.log(`CloserFlow V65 shutting down (${signal})`);
+  server.close(error=>{
+    if(error){console.error(error);process.exit(1)}
+    process.exit(0);
+  });
+  setTimeout(()=>process.exit(1),10000).unref();
+};
+process.on('SIGTERM',()=>shutdownV65('SIGTERM'));
+process.on('SIGINT',()=>shutdownV65('SIGINT'));

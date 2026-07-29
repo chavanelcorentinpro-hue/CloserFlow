@@ -1,0 +1,18 @@
+services:
+  closerflow-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      CLOSERFLOW_DATA_DIR: /var/lib/closerflow
+      CLOSERFLOW_ALLOWED_ORIGINS: ${CLOSERFLOW_ALLOWED_ORIGINS}
+    volumes:
+      - closerflow_data:/var/lib/closerflow
+    ports:
+      - "8787:8787"
+
+volumes:
+  closerflow_data:

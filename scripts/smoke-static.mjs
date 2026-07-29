@@ -59,8 +59,8 @@ cap.includes("appId: 'fr.closerflow.app'")?pass('stable appId'):fail('unexpected
 cap.includes('allowMixedContent: false')?pass('mixed content disabled'):fail('mixed content not disabled');
 
 const gradle=read('android/app/build.gradle');
-gradle.includes('versionName "59.0.0"')?pass('Android versionName'):fail('Android versionName mismatch');
-gradle.includes('versionCode 590000')?pass('Android versionCode'):fail('Android versionCode mismatch');
+gradle.includes('versionName "66.0.0"')?pass('Android versionName'):fail('Android versionName mismatch');
+gradle.includes('versionCode 660000')?pass('Android versionCode'):fail('Android versionCode mismatch');
 
 const manifest='android/app/src/main/AndroidManifest.xml';
 if(exists(manifest)){
@@ -68,7 +68,7 @@ if(exists(manifest)){
   m.includes('android:usesCleartextTraffic="false"')?pass('cleartext disabled'):fail('cleartext not disabled');
 }
 
-console.log(`CloserFlow V59 static smoke test`);
+console.log(`CloserFlow V66 static smoke test`);
 for(const x of ok)console.log('OK  ',x);
 if(failures.length){
   for(const x of failures)console.error('FAIL',x);

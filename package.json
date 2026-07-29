@@ -1,7 +1,7 @@
 {
   "name": "closerflow",
   "private": true,
-  "version": "59.0.0",
+  "version": "66.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -92,7 +92,20 @@
     "v58:web": "npm run typecheck && npm run security:scan && npm run build",
     "v58:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace",
     "v59:web": "npm run typecheck && npm run security:scan && npm run build",
-    "v59:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace"
+    "v59:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace",
+    "v60:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v60:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace",
+    "v61:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v61:apk": "npm run typecheck && npm run security:scan && npm run build && npx cap sync android && cd android && ./gradlew assembleRelease --no-daemon --stacktrace",
+    "v63:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v63:tenant-test": "node scripts/tenant-isolation-v63.mjs",
+    "v63:preflight": "npm run security:scan && npm run v63:tenant-test && npm run audit && npm run release:check && npm run lock:check && npm run smoke:static",
+    "v64:web": "npm run typecheck && npm run security:scan && npm run build",
+    "v64:db-test": "node scripts/db-v64-test.mjs",
+    "v64:backup-test": "node scripts/backup-v64-test.mjs",
+    "v64:preflight": "npm run security:scan && npm run v63:tenant-test && npm run v64:db-test && npm run v64:backup-test && npm run audit && npm run release:check && npm run lock:check && npm run smoke:static",
+    "v65:config-test": "node scripts/production-config-v65-test.mjs",
+    "v66:supabase-test": "node scripts/supabase-adapter-v66-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

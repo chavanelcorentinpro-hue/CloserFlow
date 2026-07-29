@@ -7,9 +7,9 @@ import { createId } from '../lib/id';
 export interface DocumentFormValue {
  client_id:string|null; title:string; vat_rate:number; discount_percent:number; lines:DocumentLine[];
 }
-export function DocumentForm({clients,submitLabel,onSubmit,onCancel}:{clients:{id:string;label:string}[];submitLabel:string;onSubmit:(value:DocumentFormValue)=>void;onCancel:()=>void}){
- const [clientId,setClientId]=useState(''); const [title,setTitle]=useState(''); const [vat,setVat]=useState(10); const [discount,setDiscount]=useState(0);
- const [lines,setLines]=useState<DocumentLine[]>([{id:createId(),description:'',quantity:1,unit:'forfait',unit_price_ht:0}]);
+export function DocumentForm({clients,submitLabel,onSubmit,onCancel,initialValue}:{clients:{id:string;label:string}[];submitLabel:string;onSubmit:(value:DocumentFormValue)=>void;onCancel:()=>void;initialValue?:DocumentFormValue}){
+ const [clientId,setClientId]=useState(initialValue?.client_id??''); const [title,setTitle]=useState(initialValue?.title??''); const [vat,setVat]=useState(initialValue?.vat_rate??10); const [discount,setDiscount]=useState(initialValue?.discount_percent??0);
+ const [lines,setLines]=useState<DocumentLine[]>(initialValue?.lines?.map(x=>({...x}))??[{id:createId(),description:'',quantity:1,unit:'forfait',unit_price_ht:0}]);
  const total=totals(lines,discount,vat);
  const update=(id:string,key:keyof DocumentLine,value:string|number)=>setLines(rows=>rows.map(line=>line.id===id?{...line,[key]:value}:line));
  const submit=(event:FormEvent)=>{event.preventDefault();if(lines.some(line=>!line.description.trim()))return;onSubmit({client_id:clientId||null,title,vat_rate:vat,discount_percent:discount,lines});};

@@ -1,13 +1,16 @@
-# CloserFlow V59 — Build Status
+# CloserFlow V66 — Build Status
 
-- security_scan: PASS
+- supabase adapter test: PASS
+- production config test: PASS
+- db test: PASS
+- backup test: PASS
+- tenant isolation test: PASS
+- security scan: PASS
 - audit: PASS
-- release_check: PASS
-- lock_check: PASS
-- android_release_check: PASS
-- smoke_static: PASS
-- capability issue: PASS
-- pricing protected: PASS
-- margin protected: PASS
-- ttl present: PASS
-- route: PASS
+- release check: PASS
+- lock check: PASS
+- smoke static: PASS
+- db factory wired: PASS
+- schema present: PASS
+- service key absent frontend: PASS
+- render blueprint: PASS

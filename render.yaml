@@ -1,9 +1,16 @@
 services:
   - type: web
     name: closerflow-api
-    env: docker
-    dockerfilePath: ./Dockerfile
-    autoDeploy: true
+    runtime: docker
+    dockerfilePath: ./Dockerfile.production
+    plan: free
+    healthCheckPath: /api/health/ready
     envVars:
-      - key: PORT
-        value: 8787
+      - key: NODE_ENV
+        value: production
+      - key: CLOSERFLOW_ALLOWED_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
