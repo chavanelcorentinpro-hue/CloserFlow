@@ -1,7 +1,7 @@
 {
   "name": "closerflow",
   "private": true,
-  "version": "66.0.0",
+  "version": "67.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -105,7 +105,8 @@
     "v64:backup-test": "node scripts/backup-v64-test.mjs",
     "v64:preflight": "npm run security:scan && npm run v63:tenant-test && npm run v64:db-test && npm run v64:backup-test && npm run audit && npm run release:check && npm run lock:check && npm run smoke:static",
     "v65:config-test": "node scripts/production-config-v65-test.mjs",
-    "v66:supabase-test": "node scripts/supabase-adapter-v66-test.mjs"
+    "v66:supabase-test": "node scripts/supabase-adapter-v66-test.mjs",
+    "v67:function-test": "node scripts/netlify-function-v67-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

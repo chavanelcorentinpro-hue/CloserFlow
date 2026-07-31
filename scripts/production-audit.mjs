@@ -5,7 +5,7 @@ const root=process.cwd(),fail=[],ok=[];
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const pkg=JSON.parse(read('package.json'));
 
-pkg.version==='66.0.0'?ok.push('package version 66.0.0'):fail.push(`package version ${pkg.version}`);
+pkg.version==='67.0.0'?ok.push('package version 67.0.0'):fail.push(`package version ${pkg.version}`);
 for(const f of ['src/App.tsx','capacitor.config.ts','android/app/build.gradle','src/context/AppDataContext.tsx','scripts/sync-version.mjs','scripts/release-check.mjs'])
   fs.existsSync(path.join(root,f))?ok.push(f):fail.push('missing '+f);
 
@@ -32,10 +32,10 @@ cap.includes('allowMixedContent: false')?ok.push('mixed content disabled'):fail.
 fs.existsSync(path.join(root,'android/local.properties'))?fail.push('android/local.properties must stay local'):ok.push('no machine-local android SDK path');
 
 const gradle=read('android/app/build.gradle');
-gradle.includes('versionName "66.0.0"')?ok.push('Android versionName 66.0.0'):fail.push('Android versionName stale');
-gradle.includes('versionCode 660000')?ok.push('Android versionCode 660000'):fail.push('Android versionCode stale');
+gradle.includes('versionName "67.0.0"')?ok.push('Android versionName 67.0.0'):fail.push('Android versionName stale');
+gradle.includes('versionCode 670000')?ok.push('Android versionCode 670000'):fail.push('Android versionCode stale');
 
-console.log('CloserFlow V66 production audit');
+console.log('CloserFlow V67 production audit');
 for(const x of ok)console.log('OK ',x);
 if(fail.length){
   for(const x of fail)console.error('FAIL',x);
